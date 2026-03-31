@@ -1,10 +1,10 @@
 # Python bindings for Mesh2Splat
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 set(PYBIND11_DIR ${CMAKE_SOURCE_DIR}/thirdParty/pybind11)
 
 # Find Python
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 
 # Source files for the binding library
 set(MESH2SPLAT_PY_SOURCES
@@ -28,7 +28,7 @@ if(MESH2SPLAT_ENABLE_GPU)
 endif()
 
 # Create the Python module
-pybind11_add_module(_mesh2splat ${MESH2SPLAT_PY_SOURCES})
+pybind11_add_module(_mesh2splat MODULE ${MESH2SPLAT_PY_SOURCES})
 
 # Include directories
 target_include_directories(_mesh2splat PRIVATE
@@ -62,14 +62,24 @@ if(MESH2SPLAT_ENABLE_GPU)
         find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL)
         target_link_libraries(_mesh2splat PRIVATE OpenGL::OpenGL OpenGL::EGL)
         target_compile_definitions(_mesh2splat PRIVATE MESH2SPLAT_USE_EGL)
+    elseif(WIN32)
+        # Windows: Use WGL (not yet implemented, GPU disabled on Windows by default)
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(_mesh2splat PRIVATE OpenGL::GL)
+        target_compile_definitions(_mesh2splat PRIVATE MESH2SPLAT_USE_WGL)
     endif()
 endif()
 
-# Output to python package directory
-set_target_properties(_mesh2splat PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mesh2splat
-)
+# For local development: output to python package directory
+if(NOT MESH2SPLAT_STANDALONE_PYTHON)
+    set_target_properties(_mesh2splat PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mesh2splat
+    )
+endif()
 
-# Copy Python package files
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/mesh2splat/__init__.py
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/mesh2splat)
+# For pip install: install the module to the correct location
+install(TARGETS _mesh2splat LIBRARY DESTINATION mesh2splat)
+
+# Install the Python package files
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mesh2splat/__init__.py
+        DESTINATION mesh2splat)
