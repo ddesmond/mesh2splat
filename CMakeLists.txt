@@ -75,7 +75,7 @@ if(NOT MESH2SPLAT_STANDALONE_PYTHON)
             ${GLEW_DIR}/lib/Release/x64/glew32s.lib 
             opengl32)
     else()
-        target_link_libraries(Mesh2Splat glfw glew GL) #todo
+        target_link_libraries(Mesh2Splat glfw GLEW GL stdc++fs)
     endif()
 
     set_target_properties(Mesh2Splat PROPERTIES 

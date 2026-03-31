@@ -139,6 +139,10 @@ void GaussianShadowPass::execute(RenderContext& renderContext)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_indirectDrawBuffer);
 
     unsigned int totalInvocations = renderContext.numberOfGaussians;
+    if (totalInvocations == 0) {
+        // No gaussians to process - skip shadow pass
+        return;
+    }
     unsigned int threadsPerGroup = 256;
     unsigned int totalGroupsNeeded = (totalInvocations + threadsPerGroup - 1) / threadsPerGroup;
     unsigned int groupsX = (unsigned int)ceil(sqrt((float)totalGroupsNeeded));

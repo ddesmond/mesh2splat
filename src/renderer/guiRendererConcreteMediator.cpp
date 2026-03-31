@@ -3,14 +3,20 @@
 //        Copyright (c) 2025 Electronic Arts Inc. All rights reserved.       //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "GuiRendererConcreteMediator.hpp"
+#include "guiRendererConcreteMediator.hpp"
+#include <iostream>
 
 void GuiRendererConcreteMediator::notify(EventType event)
 {
     switch (event) {
         case EventType::LoadModel: {
+            std::cerr << "[DEBUG] LoadModel event triggered" << std::endl;
+            std::cerr << "[DEBUG] Mesh path: " << imguiUI.getMeshFilePath() << std::endl;
+            std::cerr << "[DEBUG] Parent folder: " << imguiUI.getMeshFilePathParentFolder() << std::endl;
             renderer.resetModelMatrices();
+            std::cerr << "[DEBUG] Calling loadModel..." << std::endl;
             renderer.getSceneManager().loadModel(imguiUI.getMeshFilePath(), imguiUI.getMeshFilePathParentFolder());
+            std::cerr << "[DEBUG] loadModel completed" << std::endl;
             renderer.gaussianBufferFromSize(imguiUI.getResolutionTarget() * imguiUI.getResolutionTarget());
             renderer.setFormatType(0); //TODO: use an enum
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
@@ -50,6 +56,7 @@ void GuiRendererConcreteMediator::notify(EventType event)
         }
         case EventType::RunConversion: {
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
+            renderer.setProjectionMode(imguiUI.getProjectionMode() != 0); // 0=UV, 1=Orthogonal
             renderer.enableRenderPass(conversionPassName);
             imguiUI.setRunConversion(false);
             
@@ -109,8 +116,17 @@ void GuiRendererConcreteMediator::notify(EventType event)
             break;
         }
         case EventType::SavePLY: {
-            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption());
+            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption(), imguiUI.getFlipYOnExport());
             imguiUI.setShouldSavePly(false);
+            break;
+        }
+        case EventType::SaveAllFormats: {
+            // Save current format (0=Standard, 1=PBR, 2=Compressed PBR)
+            int formatIdx = imguiUI.getSaveAllFormatsIndex();
+            std::string path = imguiUI.getMeshFullFilePathDestinationWithSuffix(formatIdx);
+            renderer.getSceneManager().exportPly(path, formatIdx, imguiUI.getFlipYOnExport());
+            std::cerr << "[SaveAllFormats] Saved format " << formatIdx << " to: " << path << std::endl;
+            imguiUI.advanceSaveAllFormats();
             break;
         }
         case EventType::ResizedWindow: {
@@ -219,6 +235,10 @@ void GuiRendererConcreteMediator::update()
             notify(EventType::SavePLY);
         }
 
+        if (imguiUI.shouldSaveAllFormats()) {
+            notify(EventType::SaveAllFormats);
+        }
+
         notify(EventType::UpdateTransforms);
     }
     
@@ -228,7 +248,7 @@ void GuiRendererConcreteMediator::update()
 
 //TODO: as you can see batchItem should NOT be part of the ImGuiUI, this is poor SWE
 
-static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB; }
+static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB || e == utils::ModelFileExtension::GLTF; }
 static bool isPly(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::PLY; }
 
 void GuiRendererConcreteMediator::startBatchJob(ImGuiUI::BatchItem* job, ImGuiUI& ui) {

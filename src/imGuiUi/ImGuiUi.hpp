@@ -12,7 +12,7 @@
 #include <imgui_impl_opengl3.h>
 #include <glm/glm.hpp>
 #include "utils/utils.hpp"
-#include "Imguizmo.hpp"
+#include "ImGuizmo.hpp"
 #include "ImGuiFileDialog.h"
 
 
@@ -38,6 +38,10 @@ public:
 
     bool shouldBatchLoadNewMeshes() const ;
     bool shouldSavePly() const;
+    bool shouldSaveAllFormats() const;
+    int getSaveAllFormatsIndex() const;
+    void advanceSaveAllFormats();  // Move to next format or finish
+    void resetSaveAllFormats();    // Reset when done
     bool wasMeshLoaded() const;
     bool shouldLoadPly() const;
     bool isLightingEnabled() const;
@@ -47,6 +51,7 @@ public:
     std::string getMeshFilePath() const;
     std::string getMeshFilePathParentFolder() const;
     std::string getMeshFullFilePathDestination() const;
+    std::string getMeshFullFilePathDestinationWithSuffix(int formatIdx) const;
     std::string getPlyFilePathParentFolder() const;
     std::string getPlyFilePath() const;
 
@@ -54,6 +59,7 @@ public:
     float getGaussianStd() const;
     int getResolutionTarget() const;
     unsigned int getFormatOption() const;
+    bool getFlipYOnExport() const;
 
     glm::vec4 getSceneBackgroundColor() const;
 
@@ -79,6 +85,9 @@ public:
 
     bool isSplitScreenEnabled() const;
     float getSplitScreenPosition() const;
+    
+    // Projection mode: 0 = UV-based, 1 = Orthogonal
+    int getProjectionMode() const;
 
 
     enum class VisualizationOption
@@ -152,11 +161,17 @@ private:
     bool lightingEnabled = false;
 
     bool savePly = false;
+    bool saveAllFormats = false;
+    int saveAllFormatsIndex = 0;  // Tracks which format we're currently saving (0, 1, 2)
+    bool flipYOnExport = true;    // Flip Y axis on export for SuperSplat compatibility
 
     bool enableDepthTest = false;
 
     bool splitScreenEnabled = false;
     float splitScreenPosition = 0.5f;
+
+    // Projection mode: 0 = UV-based, 1 = Orthogonal (bbox projection)
+    int projectionMode = 1;
 
     std::string meshFilePath;
     std::string meshParentFolder;
@@ -203,13 +218,14 @@ private:
         if (!e.is_regular_file()) return false;
         auto ext = e.path().extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        return (ext == ".glb" || ext == ".ply");
+        return (ext == ".glb" || ext == ".gltf" || ext == ".ply");
     };
 
     static utils::ModelFileExtension extFromPath(const std::string& p)
     {
         auto ext = utils::getFileExtension(p);
         if (ext == utils::ModelFileExtension::GLB) return utils::ModelFileExtension::GLB;
+        if (ext == utils::ModelFileExtension::GLTF) return utils::ModelFileExtension::GLTF;
         if (ext == utils::ModelFileExtension::PLY) return utils::ModelFileExtension::PLY;
         return utils::ModelFileExtension::NONE;
     };

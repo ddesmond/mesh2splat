@@ -8,6 +8,7 @@
 #include <limits>
 #include <cmath>
 #include <cassert>
+#include <algorithm>
 
 #define GLM_FORCE_XYZW_ONLY 1
 #include <glm/glm.hpp>

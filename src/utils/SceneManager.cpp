@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
@@ -20,10 +21,19 @@ SceneManager::~SceneManager() {
 
 
 bool SceneManager::loadModel(const std::string& filePath, const std::string& parentFolder) {
+    std::cerr << "[SceneManager] loadModel called with path: " << filePath << std::endl;
+    std::cerr << "[SceneManager] parent folder: " << parentFolder << std::endl;
+    
     std::vector<utils::Mesh> meshes;
     if (!parseGltfFile(filePath, parentFolder, meshes)) {
         std::cerr << "Failed to parse GLTF file: " << filePath << std::endl;
         return false;
+    }
+    
+    std::cerr << "[SceneManager] Parsed " << meshes.size() << " meshes" << std::endl;
+    for (size_t i = 0; i < meshes.size(); i++) {
+        std::cerr << "[SceneManager] Mesh " << i << ": faces=" << meshes[i].faces.size() 
+                  << " name=" << meshes[i].name << std::endl;
     }
 
     //generateNormalizedUvCoordinates(meshes);
@@ -198,8 +208,17 @@ bool SceneManager::parseGltfFile(const std::string& filePath, const std::string&
     std::string err;
     std::string warn;
 
+    // Determine if file is binary (.glb) or ASCII (.gltf) based on extension
+    bool ret = false;
+    std::string ext = filePath.substr(filePath.find_last_of('.') + 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     
-    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);
+    if (ext == "glb") {
+        ret = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);
+    } else {
+        ret = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
+    }
+    
     if (!ret) {
         std::cerr << "Failed to load glTF: " << err << std::endl;
         return false;
@@ -525,6 +544,9 @@ void SceneManager::setupMeshBuffers(std::vector<utils::Mesh>& meshes)
             
         }
         mesh.bbox = utils::BBox(minBB, maxBB);
+        
+        std::cerr << "[SceneManager] Mesh bbox: min=(" << minBB.x << "," << minBB.y << "," << minBB.z 
+                  << ") max=(" << maxBB.x << "," << maxBB.y << "," << maxBB.z << ")" << std::endl;
 
         renderContext.totalSurfaceArea += mesh.surfaceArea;
 
@@ -568,6 +590,9 @@ void SceneManager::setupMeshBuffers(std::vector<utils::Mesh>& meshes)
 
         // Unbind VAO
         glBindVertexArray(0);
+
+        std::cerr << "[SceneManager] Created GLMesh: vertexCount=" << glMesh.vertexCount 
+                  << " vao=" << glMesh.vao << " vbo=" << glMesh.vbo << std::endl;
 
         // Add to list of GLMeshes
         renderContext.dataMeshAndGlMesh.push_back(std::make_pair(mesh, glMesh));
@@ -648,7 +673,7 @@ void SceneManager::loadTextures(const std::vector<utils::Mesh>& meshes)
     
 }
 
-void SceneManager::exportPly(const std::string outputFile, unsigned int exportFormat)
+void SceneManager::exportPly(const std::string outputFile, unsigned int exportFormat, bool flipY)
 {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderContext.gaussianBuffer);
 
@@ -671,7 +696,7 @@ void SceneManager::exportPly(const std::string outputFile, unsigned int exportFo
     std::thread(
         [=, data = std::move(cpuData)]() mutable 
         {
-            parsers::savePlyVector(outputFile, data, format, scaleMultiplier);
+            parsers::savePlyVector(outputFile, data, format, scaleMultiplier, parsers::DcMode::Current, parsers::OpacityMode::Current, flipY);
         }
     ).detach();
     

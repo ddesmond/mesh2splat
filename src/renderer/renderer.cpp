@@ -78,6 +78,13 @@ Renderer::Renderer(GLFWwindow* window, Camera& cameraInstance) : camera(cameraIn
     glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zeroVal);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
+    // Debug counters SSBO for conversion pass
+    glGenBuffers(1, &renderContext.conversionDebugCounters);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderContext.conversionDebugCounters);
+    uint32_t zeros[5] = {0, 0, 0, 0, 0};
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zeros), zeros, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
     //Indirect buff
     glGenBuffers(1, &(renderContext.drawIndirectBuffer));
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, renderContext.drawIndirectBuffer);
@@ -240,6 +247,11 @@ void Renderer::enableRenderPass(std::string renderPassName)
 void Renderer::setViewportResolutionForConversion(int resolutionTarget)
 {
     renderContext.resolutionTarget = resolutionTarget;
+}
+
+void Renderer::setProjectionMode(bool useOrthogonal)
+{
+    renderContext.useOrthogonalProjection = useOrthogonal;
 }
 
             

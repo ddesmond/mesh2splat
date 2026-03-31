@@ -5,7 +5,7 @@
 
 #pragma once
 #include "utils/utils.hpp"
-#include "ioHandler.hpp"
+#include "IoHandler.hpp"
 #include "imGuiUi/ImGuiUi.hpp"
 #include "parsers/parsers.hpp"
 #include "utils/glUtils.hpp"
@@ -35,6 +35,7 @@ public:
 	RenderContext* getRenderContext();
 	void enableRenderPass(std::string renderPassName);
 	void setViewportResolutionForConversion(int resolutionTarget);
+	void setProjectionMode(bool useOrthogonal);
 	void setFormatType(unsigned int format);
 
 	void setStdDevFromImGui(float stdDev);

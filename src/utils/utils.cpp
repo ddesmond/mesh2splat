@@ -335,7 +335,7 @@ namespace utils
 
             //rgba_normal_info = glm::vec3(srgb_to_linear_float(rgba_normal_info.x), srgb_to_linear_float(rgba_normal_info.y), srgb_to_linear_float(rgba_normal_info.z));
         
-            if (!isnan(interpolatedTangent.x) && !isnan(interpolatedTangent.y) && !isnan(interpolatedTangent.z) && !isnan(interpolatedTangent.w))
+            if (!std::isnan(interpolatedTangent.x) && !std::isnan(interpolatedTangent.y) && !std::isnan(interpolatedTangent.z) && !std::isnan(interpolatedTangent.w))
             {
                 glm::vec3 tangentXYZ(interpolatedTangent);
                 glm::vec3 retrievedNormal = glm::normalize(glm::normalize(glm::vec3(rgba_normal_info) * 2.0f - 1.0f) * glm::vec3(material.normalScale, material.normalScale, 1.0f)); //https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_material_normaltextureinfo_scale
@@ -445,6 +445,7 @@ namespace utils
         std::string ext = filename.substr(pos+1);
 
         if (ext == "glb") return ModelFileExtension::GLB;
+        else if (ext == "gltf") return ModelFileExtension::GLTF;
         else if (ext == "ply") return ModelFileExtension::PLY;
 
         return ModelFileExtension::NONE;
@@ -516,6 +517,7 @@ namespace utils
             case ModelFileExtension::NONE: return "none";
             case ModelFileExtension::PLY: return "ply";
             case ModelFileExtension::GLB: return "glb";
+            case ModelFileExtension::GLTF: return "gltf";
             default: return "Unknown";
         }
     }

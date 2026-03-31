@@ -68,6 +68,7 @@ struct RenderContext {
     // Conversion options (from ECA merge)
     uint32_t maxSplats = 4000000;
     bool autoReduceResolution = true;
+    bool useOrthogonalProjection = true; // false = UV-based projection, true = orthogonal bbox projection
     bool debugUv = false;
     bool debugColor = false;
     bool debugTextureStats = false;
