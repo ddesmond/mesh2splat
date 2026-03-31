@@ -78,8 +78,9 @@ if(NOT MESH2SPLAT_STANDALONE_PYTHON)
 endif()
 
 # For pip install: install the module to the correct location
-install(TARGETS _mesh2splat LIBRARY DESTINATION mesh2splat)
+# scikit-build-core will place these at the root of the wheel
+install(TARGETS _mesh2splat LIBRARY DESTINATION .)
 
 # Install the Python package files
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mesh2splat/__init__.py
-        DESTINATION mesh2splat)
+        DESTINATION .)
