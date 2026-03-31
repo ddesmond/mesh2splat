@@ -4,6 +4,10 @@ project(Mesh2Splat)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Options
+option(BUILD_PYTHON_BINDINGS "Build Python bindings using pybind11" OFF)
+option(MESH2SPLAT_ENABLE_GPU "Enable GPU backend for Python bindings (requires OpenGL)" ON)
+
 set(THIRD_PARTY_DIR         ${CMAKE_SOURCE_DIR}/thirdParty)
 set(GLFW_DIR                ${THIRD_PARTY_DIR}/glfw)
 set(GLEW_DIR                ${THIRD_PARTY_DIR}/glew)
@@ -79,3 +83,9 @@ set_target_properties(Mesh2Splat PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/lib/Debug
     LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/lib/Release
 )
+
+# Python bindings
+if(BUILD_PYTHON_BINDINGS)
+    add_subdirectory(thirdParty/pybind11)
+    add_subdirectory(python)
+endif()
