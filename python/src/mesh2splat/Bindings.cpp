@@ -112,6 +112,18 @@ PYBIND11_MODULE(_mesh2splat, m) {
         .value("Projection", RasterizationMode::Projection, "Rasterize using orthogonal projection (triplanar)")
         .export_values();
     
+    py::enum_<DcMode>(m, "DcMode", "DC (color) encoding mode")
+        .value("Current", DcMode::Current, "SH0 encoding (default, matches original behavior)")
+        .value("DirectLinear", DcMode::DirectLinear, "Linear RGB directly")
+        .value("DirectSrgb", DcMode::DirectSrgb, "sRGB values directly")
+        .export_values();
+    
+    py::enum_<OpacityMode>(m, "OpacityMode", "Opacity encoding mode")
+        .value("Current", OpacityMode::Current, "Format-specific default")
+        .value("Raw", OpacityMode::Raw, "Raw opacity (0-1)")
+        .value("Logit", OpacityMode::Logit, "Inverse sigmoid (standard for PLY)")
+        .export_values();
+    
     //--------------------------------------------------------------------------
     // ConversionOptions
     //--------------------------------------------------------------------------
@@ -130,6 +142,10 @@ PYBIND11_MODULE(_mesh2splat, m) {
             "Backend selection (default: Auto)")
         .def_readwrite("rasterization_mode", &ConversionOptions::rasterizationMode,
             "Rasterization mode: UV (texture-based) or Projection (triplanar) (default: UV)")
+        .def_readwrite("dc_mode", &ConversionOptions::dcMode,
+            "DC (color) encoding mode (default: Current/SH0)")
+        .def_readwrite("opacity_mode", &ConversionOptions::opacityMode,
+            "Opacity encoding mode (default: Logit)")
         .def_readwrite("verbose", &ConversionOptions::verbose,
             "Enable verbose logging (default: False)")
         .def("__repr__", [](const ConversionOptions& o) {

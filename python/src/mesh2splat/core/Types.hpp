@@ -41,6 +41,20 @@ enum class RasterizationMode {
     Projection      // Rasterize using orthogonal projection (triplanar)
 };
 
+/// DC (color) encoding mode
+enum class DcMode {
+    Current = 0,      // SH0 encoding (default, matches original behavior)
+    DirectLinear = 1, // Linear RGB directly
+    DirectSrgb = 2    // sRGB values directly
+};
+
+/// Opacity encoding mode
+enum class OpacityMode {
+    Current = 0,  // Format-specific default
+    Raw = 1,      // Raw opacity (0-1)
+    Logit = 2     // Inverse sigmoid (standard for PLY)
+};
+
 //------------------------------------------------------------------------------
 // Core Data Structures
 //------------------------------------------------------------------------------
@@ -115,12 +129,12 @@ struct Scene {
 
 /// Single Gaussian splat (matches GPU SSBO layout: 6 × vec4 = 24 floats)
 struct alignas(16) GaussianSSBO {
-    glm::vec4 position;  // xyz = position, w = unused
-    glm::vec4 color;     // rgb = SH0 coefficients, a = opacity
-    glm::vec4 scale;     // xyz = scale, w = unused
-    glm::vec4 normal;    // xyz = normal, w = unused
-    glm::vec4 rotation;  // xyzw = quaternion
-    glm::vec4 pbr;       // x = metallic, y = roughness, z = ao, w = unused
+    glm::vec4 position;    // xyz = position, w = unused
+    glm::vec4 color;       // rgb = SH0 coefficients, a = opacity
+    glm::vec4 linearScale; // xyz = linear scale (renamed from 'scale'), w = unused
+    glm::vec4 normal;      // xyz = normal, w = unused
+    glm::vec4 rotation;    // xyzw = quaternion
+    glm::vec4 pbr;         // x = metallic, y = roughness, z = ao, w = unused
 };
 
 static_assert(sizeof(GaussianSSBO) == 96, "GaussianSSBO must be 96 bytes (6 × vec4)");
@@ -181,6 +195,12 @@ struct ConversionOptions {
     // Rasterization mode (UV-based or projection-based)
     RasterizationMode rasterizationMode = RasterizationMode::UV;
     
+    // Color encoding mode
+    DcMode dcMode = DcMode::Current;
+    
+    // Opacity encoding mode
+    OpacityMode opacityMode = OpacityMode::Logit;
+    
     // Verbose logging
     bool verbose = false;
 };
@@ -237,5 +257,14 @@ std::string getBackendName(Backend backend);
 
 /// Get available backends on this system
 std::vector<Backend> getAvailableBackends();
+
+/// Compute DC (color) from linear color based on mode
+glm::vec3 computeDcFromColor(const glm::vec3& colorLinear, DcMode dcMode);
+
+/// Encode opacity based on mode
+float encodeOpacity(float opacity, OpacityMode mode);
+
+/// Safe log function (avoids -inf for very small values)
+float safeLog(float v);
 
 } // namespace mesh2splat

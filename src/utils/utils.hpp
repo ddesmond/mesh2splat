@@ -4,9 +4,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+
+// Windows-only memory debugging
+#ifdef _WIN32
 #define _CRTDBG_MAP_ALLOC  
 #include <stdlib.h>  
-#include <crtdbg.h>  
+#include <crtdbg.h>
+#else
+#include <cstdlib>
+#endif  
 
 #include <string>
 #include <vector>
@@ -38,6 +44,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+#ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -46,6 +53,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#endif
 
 
 static void CheckOpenGLError(const char* stmt, const char* fname, int line)
@@ -90,8 +98,17 @@ namespace utils
         std::vector<unsigned char> texture;
         int width, height;
         unsigned int channels;
+        int textureIndex = -1;
+        int imageIndex = -1;
+        int samplerIndex = -1;
+        int wrapS = 0;
+        int wrapT = 0;
+        int minFilter = 0;
+        int magFilter = 0;
+        std::string mimeType;
 
-        TextureInfo(const std::string& path = EMPTY_TEXTURE, int texCoordIndex = 0, std::vector<unsigned char> texture = {}, int width = 0, int height = 0, unsigned int channels = 0) : path(path), texCoordIndex(texCoordIndex), texture(texture), width(width), height(height), channels(channels) {}
+        TextureInfo(const std::string& path = EMPTY_TEXTURE, int texCoordIndex = 0, std::vector<unsigned char> texture = {}, int width = 0, int height = 0, unsigned int channels = 0)
+            : path(path), texCoordIndex(texCoordIndex), texture(texture), width(width), height(height), channels(channels) {}
     };
 
     struct MaterialGltf {
@@ -145,7 +162,7 @@ namespace utils
     struct GaussianDataSSBO {
         glm::vec4 position;
         glm::vec4 color;
-        glm::vec4 scale;
+        glm::vec4 linearScale;  // Renamed from 'scale' for clarity (linear-space scale)
         glm::vec4 normal;
         glm::vec4 rotation;
         glm::vec4 pbr;
@@ -173,6 +190,23 @@ namespace utils
 
     struct Mesh {
         std::string name;
+        std::string sourceName;
+        int primitiveIndex = -1;
+        int materialIndex = -1;
+        struct UVAccessorInfo {
+            bool hasTexcoord = false;
+            int accessorIndex = -1;
+            int accessorType = 0;
+            int componentType = 0;
+            bool normalized = false;
+            size_t count = 0;
+            size_t accessorByteOffset = 0;
+            int bufferViewIndex = -1;
+            size_t bufferViewByteOffset = 0;
+            size_t bufferViewByteStride = 0;
+            int bufferIndex = -1;
+            size_t bufferByteLength = 0;
+        } uvAccessor;
         std::vector<Face> faces; // Tuple of vertex indices, uv indices and normalIndices
         MaterialGltf material; 
         float surfaceArea = 0;
@@ -193,6 +227,11 @@ namespace utils
         unsigned int glTextureID    = 0;
         unsigned int width          = 0;
         unsigned int height         = 0;
+        int wrapS = 0;
+        int wrapT = 0;
+        int minFilter = 0;
+        int magFilter = 0;
+        bool srgb = false;
 
         TextureDataGl(std::vector<unsigned char> textureData, unsigned int channels, unsigned int glTextureID, unsigned int width, unsigned int height) : textureData(textureData), channels(channels), glTextureID(glTextureID), width(width), height(height){}
         
@@ -205,6 +244,10 @@ namespace utils
             glTextureID = 0;
             width = info.width;
             height = info.height;
+            wrapS = info.wrapS;
+            wrapT = info.wrapT;
+            minFilter = info.minFilter;
+            magFilter = info.magFilter;
         }
 
 

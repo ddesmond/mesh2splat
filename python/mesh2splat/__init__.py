@@ -33,6 +33,8 @@ try:
         Backend,
         PlyFormat,
         RasterizationMode,
+        DcMode,
+        OpacityMode,
         # Core types
         Gaussian,
         ConversionResult,
@@ -71,6 +73,8 @@ __all__ = [
     "Backend",
     "PlyFormat",
     "RasterizationMode",
+    "DcMode",
+    "OpacityMode",
     # Core types
     "Gaussian",
     "ConversionResult",

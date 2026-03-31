@@ -5,6 +5,13 @@
 
 #include "utils.hpp"
 
+// Platform-specific includes for getExecutablePath
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#endif
+
 namespace utils
 {
     // Function to check if a point is inside a triangle
@@ -387,7 +394,7 @@ namespace utils
         bool skip = false;
         skip |= glm::any(glm::isnan(g.position)) || glm::any(glm::isinf(g.position));
         skip |= glm::any(glm::isnan(g.color))    || glm::any(glm::isinf(g.color));
-        skip |= glm::any(glm::isnan(g.scale))    || glm::any(glm::isinf(g.scale));
+        skip |= glm::any(glm::isnan(g.linearScale)) || glm::any(glm::isinf(g.linearScale));
         skip |= glm::any(glm::isnan(g.normal))   || glm::any(glm::isinf(g.normal));
         skip |= glm::any(glm::isnan(g.rotation)) || glm::any(glm::isinf(g.rotation));
         skip |= glm::any(glm::isnan(g.pbr))      || glm::any(glm::isinf(g.pbr));
@@ -395,7 +402,7 @@ namespace utils
     
         return (g.position == glm::vec4(0.0f) &&
                 g.color    == glm::vec4(0.0f) &&
-                g.scale    == glm::vec4(0.0f) &&
+                g.linearScale == glm::vec4(0.0f) &&
                 g.normal   == glm::vec4(0.0f) &&
                 g.rotation == glm::vec4(0.0f) &&
                 g.pbr      == glm::vec4(0.0f));
@@ -452,9 +459,28 @@ namespace utils
     }
 
     std::string getExecutablePath() {
+#ifdef _WIN32
         char buffer[MAX_PATH];
         GetModuleFileNameA(nullptr, buffer, MAX_PATH);
         return std::string(buffer);
+#elif defined(__APPLE__)
+        char buffer[1024];
+        uint32_t size = sizeof(buffer);
+        if (_NSGetExecutablePath(buffer, &size) == 0) {
+            return std::string(buffer);
+        }
+        return "";
+#elif defined(__linux__)
+        char buffer[1024];
+        ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+        if (len != -1) {
+            buffer[len] = '\0';
+            return std::string(buffer);
+        }
+        return "";
+#else
+        return "";
+#endif
     }
 
     std::string getExecutableDir() {

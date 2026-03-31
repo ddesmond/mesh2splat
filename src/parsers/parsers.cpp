@@ -4,9 +4,54 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "parsers.hpp"
+#include <cmath>
+#include <algorithm>
 
 namespace parsers
-{ 
+{
+    // Helper function: compute DC (color) based on DcMode
+    static glm::vec3 computeDcFromColor(const glm::vec3& colorLinear, DcMode dcMode)
+    {
+        switch (dcMode)
+        {
+            case DcMode::DirectLinear:
+                return colorLinear;
+            case DcMode::DirectSrgb:
+                return utils::linear_to_srgb_float(colorLinear);
+            case DcMode::Current:
+            default:
+                return utils::getShFromColor(colorLinear);
+        }
+    }
+
+    // Helper function: encode opacity based on OpacityMode
+    static float encodeOpacity(float opacityLinear, OpacityMode mode, bool defaultLogit)
+    {
+        bool useLogit = defaultLogit;
+        if (mode == OpacityMode::Raw) useLogit = false;
+        else if (mode == OpacityMode::Logit) useLogit = true;
+
+        if (!useLogit)
+            return opacityLinear;
+
+        // Inverse sigmoid with clamping for numerical stability
+        auto invSigmoid = [](float a) -> float {
+            const float eps = 1e-6f;
+            if (!std::isfinite(a)) a = 0.5f;
+            a = std::clamp(a, eps, 1.0f - eps);
+            return std::log(a / (1.0f - a));
+        };
+
+        return invSigmoid(opacityLinear);
+    }
+
+    // Safe log function to avoid -inf
+    static float safeLog(float v)
+    {
+        const float eps = 1e-12f;
+        if (!std::isfinite(v) || v <= eps) v = eps;
+        return std::log(v);
+    } 
     //TODO: Careful to remember that the image is saved with its original name, if you change filename after 
     utils::TextureDataGl loadImageAndBpp(std::string texturePath, int& textureWidth, int& textureHeight) 
     {
@@ -229,7 +274,7 @@ namespace parsers
         return projectedVertices;
     }
 
-    void writePbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier) {
+    void writePbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, DcMode dcMode, OpacityMode opacityMode) {
         std::ofstream file(filename, std::ios::binary | std::ios::out);
 
         // Write header in ASCII
@@ -266,7 +311,7 @@ namespace parsers
         file << "end_header\n";
 
         // Write vertex data in binary
-        for (auto& gaussian : gaussians) {
+        for (const auto& gaussian : gaussians) {
             //Mean
             file.write(reinterpret_cast<const char*>(&gaussian.position.x), sizeof(gaussian.position.x));
             file.write(reinterpret_cast<const char*>(&gaussian.position.y), sizeof(gaussian.position.y));
@@ -275,18 +320,12 @@ namespace parsers
             file.write(reinterpret_cast<const char*>(&gaussian.normal.x), sizeof(gaussian.normal.x));
             file.write(reinterpret_cast<const char*>(&gaussian.normal.y), sizeof(gaussian.normal.y));
             file.write(reinterpret_cast<const char*>(&gaussian.normal.z), sizeof(gaussian.normal.z));
-            //RGB
-
-            //TODO: 
-            glm::vec3 sh0 = utils::getShFromColor(gaussian.color);
+            //RGB - using configurable DC mode
+            glm::vec3 sh0 = computeDcFromColor(glm::vec3(gaussian.color), dcMode);
             
-            file.write(reinterpret_cast<const char*>(&sh0.r), sizeof(sh0.r));
-            file.write(reinterpret_cast<const char*>(&sh0.g), sizeof(sh0.g));
-            file.write(reinterpret_cast<const char*>(&sh0.b), sizeof(sh0.b));
-
-            //file.write(reinterpret_cast<const char*>(&gaussian.color.r), sizeof(gaussian.color.r));
-            //file.write(reinterpret_cast<const char*>(&gaussian.color.g), sizeof(gaussian.color.g));
-            //file.write(reinterpret_cast<const char*>(&gaussian.color.b), sizeof(gaussian.color.b));
+            file.write(reinterpret_cast<const char*>(&sh0.x), sizeof(sh0.x));
+            file.write(reinterpret_cast<const char*>(&sh0.y), sizeof(sh0.y));
+            file.write(reinterpret_cast<const char*>(&sh0.z), sizeof(sh0.z));
 
             //---------NEW-----------------------------------------------------
             //Material properties
@@ -295,16 +334,19 @@ namespace parsers
             file.write(reinterpret_cast<const char*>(&gaussian.pbr.y), sizeof(gaussian.pbr.y));
             //-----------------------------------------------------------------
 
-            //Opacity
-            file.write(reinterpret_cast<const char*>(&gaussian.color.a), sizeof(gaussian.color.a));
-            
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(gaussian.scale.z * scaleMultiplier);           
+            //Opacity - using configurable opacity mode (default uses logit)
+            float opacityOut = encodeOpacity(gaussian.color.w, opacityMode, true);
+            file.write(reinterpret_cast<const char*>(&opacityOut), sizeof(opacityOut));
 
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(gaussian.scale.x));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(gaussian.scale.y));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(gaussian.scale.z));
+            // Scale: write log(linearScale * scaleMultiplier), but clamp to avoid -inf
+            glm::vec3 packedScale;
+            packedScale.x = safeLog(gaussian.linearScale.x * scaleMultiplier);
+            packedScale.y = safeLog(gaussian.linearScale.y * scaleMultiplier);
+            packedScale.z = safeLog(gaussian.linearScale.z * scaleMultiplier);
+
+            file.write(reinterpret_cast<const char*>(&packedScale.x), sizeof(packedScale.x));
+            file.write(reinterpret_cast<const char*>(&packedScale.y), sizeof(packedScale.y));
+            file.write(reinterpret_cast<const char*>(&packedScale.z), sizeof(packedScale.z));
             //Rotation
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.x), sizeof(gaussian.rotation.x));
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.y), sizeof(gaussian.rotation.y));
@@ -376,17 +418,17 @@ namespace parsers
         };
         
         // Write vertex data in binary
-        for (auto& gaussian : gaussians) {
+        for (const auto& gaussian : gaussians) {
             //POSITION
             file.write(reinterpret_cast<const char*>(&gaussian.position.x), sizeof(float));
             file.write(reinterpret_cast<const char*>(&gaussian.position.y), sizeof(float));
             file.write(reinterpret_cast<const char*>(&gaussian.position.z), sizeof(float));
             
             //COLOR
-            uint8_t r = toByte(gaussian.color.r);
-            uint8_t g = toByte(gaussian.color.g);
-            uint8_t b = toByte(gaussian.color.b);
-            uint8_t a = toByte(gaussian.color.a);
+            uint8_t r = toByte(gaussian.color.x);
+            uint8_t g = toByte(gaussian.color.y);
+            uint8_t b = toByte(gaussian.color.z);
+            uint8_t a = toByte(gaussian.color.w);
             file.write(reinterpret_cast<const char*>(&r), sizeof(uint8_t));
             file.write(reinterpret_cast<const char*>(&g), sizeof(uint8_t));
             file.write(reinterpret_cast<const char*>(&b), sizeof(uint8_t));
@@ -398,15 +440,16 @@ namespace parsers
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.z), sizeof(float));
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.w), sizeof(float));
 
-            //SCALE
-            float minXY = std::min(gaussian.scale.x, gaussian.scale.y);
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(minXY * scaleMultiplier);           
+            //SCALE - using linearScale
+            glm::vec3 packedScale;
+            float minXY = std::min(gaussian.linearScale.x, gaussian.linearScale.y);
+            packedScale.x = safeLog(gaussian.linearScale.x * scaleMultiplier);
+            packedScale.y = safeLog(gaussian.linearScale.y * scaleMultiplier);
+            packedScale.z = safeLog(minXY * scaleMultiplier);           
 
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(float));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(float));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&packedScale.x), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&packedScale.y), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&packedScale.z), sizeof(float));
 
             //NORMAL COMPRESSED
             glm::vec2 mapped = EncodeOcta(gaussian.normal);
@@ -427,7 +470,7 @@ namespace parsers
     }
 
 
-    void writeBinaryPlyStandardFormat(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier) {
+    void writeBinaryPlyStandardFormat(const std::string& filename, const std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, DcMode dcMode, OpacityMode opacityMode) {
         std::ofstream file(filename, std::ios::binary | std::ios::out);
         //TODO: abstract this somehow
         // Write header in ASCII
@@ -465,7 +508,7 @@ namespace parsers
         file << "end_header\n";
 
         // Write vertex data in binary
-        for (auto& gaussian : gaussians) {
+        for (const auto& gaussian : gaussians) {
             // Mean
             file.write(reinterpret_cast<const char*>(&gaussian.position.x), sizeof(gaussian.position.x));
             file.write(reinterpret_cast<const char*>(&gaussian.position.y), sizeof(gaussian.position.y));
@@ -476,12 +519,12 @@ namespace parsers
             file.write(reinterpret_cast<const char*>(&gaussian.normal.y), sizeof(gaussian.normal.y));
             file.write(reinterpret_cast<const char*>(&gaussian.normal.z), sizeof(gaussian.normal.z));
 
-            // RGB
-            glm::vec3 sh0 = utils::getShFromColor(gaussian.color);
+            // RGB - using configurable DC mode
+            glm::vec3 sh0 = computeDcFromColor(glm::vec3(gaussian.color), dcMode);
             
-            file.write(reinterpret_cast<const char*>(&sh0.r), sizeof(sh0.r));
-            file.write(reinterpret_cast<const char*>(&sh0.g), sizeof(sh0.g));
-            file.write(reinterpret_cast<const char*>(&sh0.b), sizeof(sh0.b));
+            file.write(reinterpret_cast<const char*>(&sh0.x), sizeof(sh0.x));
+            file.write(reinterpret_cast<const char*>(&sh0.y), sizeof(sh0.y));
+            file.write(reinterpret_cast<const char*>(&sh0.z), sizeof(sh0.z));
 
             // Fill f_rest_0 to f_rest_44 with zeros
             float zero = 0.0f;
@@ -489,17 +532,20 @@ namespace parsers
                 file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
             }
 
-            // Opacity
-            file.write(reinterpret_cast<const char*>(&gaussian.color.a), sizeof(gaussian.color.a));
+            // Opacity - using configurable opacity mode (default uses logit)
+            float opacityOut = encodeOpacity(gaussian.color.w, opacityMode, true);
+            file.write(reinterpret_cast<const char*>(&opacityOut), sizeof(opacityOut));
 
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(gaussian.scale.z * scaleMultiplier);
+            // Scale: write log(linearScale * scaleMultiplier), but clamp to avoid -inf
+            glm::vec3 packedScale;
+            packedScale.x = safeLog(gaussian.linearScale.x * scaleMultiplier);
+            packedScale.y = safeLog(gaussian.linearScale.y * scaleMultiplier);
+            packedScale.z = safeLog(gaussian.linearScale.z * scaleMultiplier);
 
             // Scale
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(gaussian.scale.x));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(gaussian.scale.y));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(gaussian.scale.z));
+            file.write(reinterpret_cast<const char*>(&packedScale.x), sizeof(packedScale.x));
+            file.write(reinterpret_cast<const char*>(&packedScale.y), sizeof(packedScale.y));
+            file.write(reinterpret_cast<const char*>(&packedScale.z), sizeof(packedScale.z));
 
             // Rotation
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.x), sizeof(gaussian.rotation.x));
@@ -565,15 +611,16 @@ namespace parsers
                 gaussian.position.w = 1.0f;
 
                 glm::vec3 rgb_color = utils::getColorFromSh(glm::vec3(vertex_f_dc_0[i], vertex_f_dc_1[i], vertex_f_dc_2[i]));
-                gaussian.color.x = rgb_color.r;
-                gaussian.color.y = rgb_color.g;
-                gaussian.color.z = rgb_color.b;
+                gaussian.color.x = rgb_color.x;
+                gaussian.color.y = rgb_color.y;
+                gaussian.color.z = rgb_color.z;
                 gaussian.color.w = utils::sigmoid(vertex_opacity[i]);
 
-                gaussian.scale.x = glm::exp(vertex_scale_0[i]);
-                gaussian.scale.y = glm::exp(vertex_scale_1[i]);
-                gaussian.scale.z = glm::exp(vertex_scale_2[i]);
-                gaussian.scale.w = 1.0f;
+                // linearScale stores linear-space scale values
+                gaussian.linearScale.x = glm::exp(vertex_scale_0[i]);
+                gaussian.linearScale.y = glm::exp(vertex_scale_1[i]);
+                gaussian.linearScale.z = glm::exp(vertex_scale_2[i]);
+                gaussian.linearScale.w = 1.0f;
 
                 gaussian.normal.x = vertex_nx[i];
                 gaussian.normal.y = vertex_ny[i];
@@ -596,16 +643,16 @@ namespace parsers
         
     }
 
-    void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO> gaussians_3D_list, unsigned int FORMAT, float scaleMultiplier)
+    void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO> gaussians_3D_list, unsigned int FORMAT, float scaleMultiplier, DcMode dcMode, OpacityMode opacityMode)
     {
         switch (FORMAT)
         {
             case 0:
-                writeBinaryPlyStandardFormat(outputFileLocation, gaussians_3D_list, scaleMultiplier);
+                writeBinaryPlyStandardFormat(outputFileLocation, gaussians_3D_list, scaleMultiplier, dcMode, opacityMode);
                 break;
     
             case 1:
-                writePbrPLY(outputFileLocation, gaussians_3D_list, scaleMultiplier);
+                writePbrPLY(outputFileLocation, gaussians_3D_list, scaleMultiplier, dcMode, opacityMode);
                 break;
 
             case 2:
@@ -613,7 +660,7 @@ namespace parsers
                 break;
     
             default:
-                writeBinaryPlyStandardFormat(outputFileLocation, gaussians_3D_list, scaleMultiplier);
+                writeBinaryPlyStandardFormat(outputFileLocation, gaussians_3D_list, scaleMultiplier, dcMode, opacityMode);
                 break;
         }
     }

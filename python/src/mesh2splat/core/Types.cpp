@@ -27,10 +27,10 @@ Gaussian Gaussian::fromSSBO(const GaussianSSBO& ssbo) {
     g.b = ssbo.color.z;
     g.opacity = ssbo.color.w;
     
-    // Scale
-    g.scale_x = ssbo.scale.x;
-    g.scale_y = ssbo.scale.y;
-    g.scale_z = ssbo.scale.z;
+    // Scale - use linearScale
+    g.scale_x = ssbo.linearScale.x;
+    g.scale_y = ssbo.linearScale.y;
+    g.scale_z = ssbo.linearScale.z;
     
     // Normal
     g.nx = ssbo.normal.x;
@@ -56,7 +56,7 @@ GaussianSSBO Gaussian::toSSBO() const {
     
     ssbo.position = glm::vec4(x, y, z, 1.0f);
     ssbo.color = glm::vec4(r, g, b, opacity);
-    ssbo.scale = glm::vec4(scale_x, scale_y, scale_z, 0.0f);
+    ssbo.linearScale = glm::vec4(scale_x, scale_y, scale_z, 0.0f);
     ssbo.normal = glm::vec4(nx, ny, nz, 0.0f);
     ssbo.rotation = glm::vec4(rot_x, rot_y, rot_z, rot_w);
     ssbo.pbr = glm::vec4(metallic, roughness, ao, 0.0f);
@@ -199,6 +199,46 @@ std::vector<Backend> getAvailableBackends() {
 #endif
     
     return backends;
+}
+
+//------------------------------------------------------------------------------
+// Color/Opacity Encoding Helpers
+//------------------------------------------------------------------------------
+
+glm::vec3 computeDcFromColor(const glm::vec3& colorLinear, DcMode dcMode) {
+    switch (dcMode) {
+        case DcMode::Current:
+            // SH0 encoding: (color - 0.5) / SH_COEFF0
+            return colorToSH0(colorLinear);
+        case DcMode::DirectLinear:
+            // Linear RGB directly
+            return colorLinear;
+        case DcMode::DirectSrgb:
+            // sRGB values directly
+            return linearToSRGB(colorLinear);
+        default:
+            return colorToSH0(colorLinear);
+    }
+}
+
+float encodeOpacity(float opacity, OpacityMode mode) {
+    switch (mode) {
+        case OpacityMode::Current:
+        case OpacityMode::Logit:
+            // Inverse sigmoid (logit) - standard for PLY files
+            opacity = glm::clamp(opacity, 0.0001f, 0.9999f);
+            return std::log(opacity / (1.0f - opacity));
+        case OpacityMode::Raw:
+            // Raw opacity (0-1)
+            return opacity;
+        default:
+            opacity = glm::clamp(opacity, 0.0001f, 0.9999f);
+            return std::log(opacity / (1.0f - opacity));
+    }
+}
+
+float safeLog(float v) {
+    return std::log(std::max(v, 1e-12f));
 }
 
 } // namespace mesh2splat

@@ -148,10 +148,10 @@ void PlyIO::writeStandard(const std::string& filename,
         float logitOpacity = inverseSigmoid(g.opacity);
         file.write(reinterpret_cast<const char*>(&logitOpacity), sizeof(float));
         
-        // Scale (log space)
-        float sx = std::log(g.scale_x * scaleMultiplier);
-        float sy = std::log(g.scale_y * scaleMultiplier);
-        float sz = std::log(g.scale_z * scaleMultiplier);
+        // Scale (log space with safe log to avoid -inf)
+        float sx = safeLog(g.scale_x * scaleMultiplier);
+        float sy = safeLog(g.scale_y * scaleMultiplier);
+        float sz = safeLog(g.scale_z * scaleMultiplier);
         file.write(reinterpret_cast<const char*>(&sx), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
@@ -232,10 +232,10 @@ void PlyIO::writePBR(const std::string& filename,
         float logitOpacity = inverseSigmoid(g.opacity);
         file.write(reinterpret_cast<const char*>(&logitOpacity), sizeof(float));
         
-        // Scale (log space)
-        float sx = std::log(g.scale_x * scaleMultiplier);
-        float sy = std::log(g.scale_y * scaleMultiplier);
-        float sz = std::log(g.scale_z * scaleMultiplier);
+        // Scale (log space with safe log to avoid -inf)
+        float sx = safeLog(g.scale_x * scaleMultiplier);
+        float sy = safeLog(g.scale_y * scaleMultiplier);
+        float sz = safeLog(g.scale_z * scaleMultiplier);
         file.write(reinterpret_cast<const char*>(&sx), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
@@ -312,11 +312,11 @@ void PlyIO::writeCompressed(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&g.rot_z), sizeof(float));
         file.write(reinterpret_cast<const char*>(&g.rot_w), sizeof(float));
         
-        // Scale (log space, using min of x,y for z)
-        float sx = std::log(g.scale_x * scaleMultiplier);
-        float sy = std::log(g.scale_y * scaleMultiplier);
+        // Scale (log space with safe log, using min of x,y for z)
+        float sx = safeLog(g.scale_x * scaleMultiplier);
+        float sy = safeLog(g.scale_y * scaleMultiplier);
         float minXY = std::min(g.scale_x, g.scale_y);
-        float sz = std::log(minXY * scaleMultiplier);
+        float sz = safeLog(minXY * scaleMultiplier);
         file.write(reinterpret_cast<const char*>(&sx), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
