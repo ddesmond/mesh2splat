@@ -18,7 +18,7 @@ uniform vec2 u_resolution;
 uniform vec3 u_LightPosition;
 uniform vec3 u_camPos;
 uniform vec3 u_lightColor;
-uniform bool u_isLightingEnalbed;
+uniform bool u_isLightingEnabled;
 uniform float u_farPlane;
 uniform float u_lightIntensity;
 uniform int u_renderMode;

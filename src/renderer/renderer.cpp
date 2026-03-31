@@ -331,11 +331,11 @@ void Renderer::createDepthTexture()
     {
         std::cerr << "Depth FBO not complete!" << std::endl;
     }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    
    glDrawBuffer(GL_NONE);
    glReadBuffer(GL_NONE);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::deleteDepthTexture()
