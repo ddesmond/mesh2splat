@@ -1,8 +1,8 @@
 # Mesh2Splat Python Bindings - Implementation Plan
 
-## Status: COMPLETE ✓
+## Status: COMPLETE
 
-All phases implemented and tested successfully on macOS.
+All phases implemented and tested. Pip package and Docker builds available.
 
 ---
 
@@ -14,23 +14,68 @@ Python bindings for the Mesh2Splat library, enabling headless mesh-to-gaussian c
 
 | Feature | Details | Status |
 |---------|---------|--------|
-| **Binding Tech** | pybind11 | ✓ |
-| **Backends** | CPU (portable) + GPU (OpenGL) | ✓ |
-| **Backend Selection** | Auto-detect (GPU first, fallback to CPU) | ✓ |
-| **GPU Context** | EGL (Linux), CGL (macOS) | ✓ |
-| **Platforms** | Linux, macOS | ✓ macOS tested |
-| **Python Env** | `.venv/` with `requirements.txt` | ✓ |
-| **Build** | CMake-integrated | ✓ |
-| **API Style** | Object-oriented | ✓ |
+| **Binding Tech** | pybind11 | Done |
+| **Backends** | CPU (portable) + GPU (OpenGL) | Done |
+| **Backend Selection** | Auto-detect (GPU first, fallback to CPU) | Done |
+| **GPU Context** | EGL (Linux), CGL (macOS) | Done |
+| **Platforms** | Linux, macOS | Done |
+| **Python Versions** | 3.10, 3.11, 3.12 | Done |
+| **Pip Package** | scikit-build-core | Done |
+| **Docker Builds** | manylinux, Debian, Ubuntu | Done |
 
 ### Test Results (macOS, Apple Silicon)
 
-| Backend | Gaussians | Time | Notes |
-|---------|-----------|------|-------|
-| CPU | 631,102 | ~118ms | UV-space rasterization |
-| GPU | 167,348 | ~65ms | Orthogonal projection |
+| Backend | Mode | Gaussians | Time |
+|---------|------|-----------|------|
+| CPU | UV | 118,464 | ~118ms |
+| GPU | UV | 118,874 | ~65ms |
+| CPU | Projection | 631,102 | ~120ms |
+| GPU | Projection | 167,348 | ~65ms |
 
 Test model: `small_lpg_tank_4k.gltf` (15,042 triangles) at resolution 512.
+
+---
+
+## Quick Start
+
+### Install from Wheel
+
+```bash
+pip install dist/mesh2splat-*.whl
+```
+
+### Build Wheels
+
+```bash
+# macOS
+make wheels-macos
+
+# Linux (Docker)
+make wheels-linux
+
+# All platforms
+make wheels-all
+```
+
+### Usage
+
+```python
+import mesh2splat
+
+# Simple conversion
+mesh2splat.convert("model.gltf", "output.ply")
+
+# With options
+converter = mesh2splat.Converter()
+options = mesh2splat.ConversionOptions()
+options.resolution = 1024
+options.rasterization_mode = mesh2splat.RasterizationMode.UV
+
+result = converter.convert_file("model.gltf", options)
+print(f"Generated {result.total_gaussians} gaussians")
+
+mesh2splat.PlyIO.save("output.ply", result.gaussians)
+```
 
 ---
 
@@ -38,159 +83,161 @@ Test model: `small_lpg_tank_4k.gltf` (15,042 triangles) at resolution 512.
 
 ```
 mesh2splat/
-├── CMakeLists.txt                         # MODIFIED: Added BUILD_PYTHON_BINDINGS option
-├── .gitignore                             # MODIFIED: Added Python ignores, models/
-├── requirements.txt                       # Python dependencies
-├── .venv/                                 # Virtual environment (gitignored)
+├── CMakeLists.txt              # Root CMake (BUILD_PYTHON_BINDINGS option)
+├── pyproject.toml              # Pip package config (scikit-build-core)
+├── Makefile                    # Build targets for wheels
+├── requirements.txt            # Python dev dependencies
+├── PLAN.md                     # This file
+├── GUIDE.md                    # Docker build guide
+├── BUILD_PYTHON.md             # Python wheel build guide
 │
-├── python/                                # Python bindings
-│   ├── CMakeLists.txt                     # Build configuration
+├── docker/                     # Docker build files
+│   ├── build.sh                # Build orchestration script
+│   ├── Dockerfile.manylinux2014
+│   ├── Dockerfile.manylinux_2_28
+│   ├── Dockerfile.debian12
+│   ├── Dockerfile.ubuntu2204
+│   └── Dockerfile.ubuntu2404
+│
+├── python/                     # Python bindings source
+│   ├── CMakeLists.txt
 │   ├── mesh2splat/
-│   │   ├── __init__.py                    # Package init with fallback
-│   │   └── _mesh2splat.cpython-*.so       # Built native module
-│   ├── example.py                         # Usage example
-│   │
+│   │   └── __init__.py
+│   ├── example.py
 │   └── src/mesh2splat/
-│       ├── Bindings.cpp                   # pybind11 module entry
-│       ├── Converter.hpp/cpp              # Interface + factory
-│       │
-│       ├── core/                          # Core types (GL-free)
-│       │   ├── Types.hpp/cpp              # Gaussian, Scene, Mesh, etc.
-│       │   ├── GltfLoader.hpp/cpp         # GLTF loading (tiny_gltf)
-│       │   ├── PlyIO.hpp/cpp              # PLY I/O (happly)
-│       │   └── TextureSampler.hpp/cpp     # Bilinear texture sampling
-│       │
-│       ├── cpu/                           # CPU backend
-│       │   ├── CPUConverter.hpp/cpp       # CPU conversion pipeline
-│       │   └── Rasterizer.hpp/cpp         # Triangle rasterization
-│       │
-│       └── gpu/                           # GPU backend
-│           ├── GPUConverter.hpp/cpp       # GPU conversion pipeline
-│           ├── HeadlessContext.hpp/cpp    # EGL (Linux) / CGL (macOS)
-│           └── ShaderManager.hpp/cpp      # Embedded GLSL 410 shaders
+│       ├── Bindings.cpp        # pybind11 module
+│       ├── Converter.hpp/cpp   # Main interface
+│       ├── core/               # GL-free types
+│       │   ├── Types.hpp/cpp
+│       │   ├── GltfLoader.hpp/cpp
+│       │   ├── PlyIO.hpp/cpp
+│       │   └── TextureSampler.hpp/cpp
+│       ├── cpu/                # CPU backend
+│       │   ├── CPUConverter.hpp/cpp
+│       │   └── Rasterizer.hpp/cpp
+│       └── gpu/                # GPU backend
+│           ├── GPUConverter.hpp/cpp
+│           ├── HeadlessContext.hpp/cpp
+│           └── ShaderManager.hpp/cpp
 │
-├── models/                                # Test models (gitignored)
+├── dist/                       # Built wheels (gitignored)
+│   ├── macos/
+│   └── linux/
 │
 └── thirdParty/
-    ├── pybind11/                          # Git submodule
-    └── ... (glm, tiny_gltf, happly, stb)
+    └── pybind11/               # Git submodule
 ```
 
 ---
 
-## Implementation Phases
+## Build System
 
-### Phase 0: Environment Setup ✓
+### Makefile Targets
 
-- `requirements.txt` - pybind11, numpy, pytest
-- `.gitignore` - Python ignores, models/, .venv/
+| Target | Description |
+|--------|-------------|
+| `make wheels-macos` | Build macOS wheels (3.10, 3.11, 3.12) |
+| `make wheels-macos-3.10` | Build macOS wheel for Python 3.10 |
+| `make wheels-linux` | Build all Linux wheels via Docker |
+| `make wheels-linux-manylinux2014` | Build manylinux2014 wheels |
+| `make wheels-all` | Build all platforms |
+| `make clean` | Remove build artifacts |
+| `make test` | Test installed wheel |
 
-### Phase 1: CMake Configuration ✓
+### Docker Images
 
-- `CMakeLists.txt` - Added `BUILD_PYTHON_BINDINGS` option
-- `python/CMakeLists.txt` - Full build with platform detection
-- `MESH2SPLAT_ENABLE_GPU` option (default ON)
-
-### Phase 2: Core Types & Utilities ✓
-
-- `Types.hpp/cpp` - Gaussian, GaussianSSBO, Scene, Mesh, Face, Material, BBox, ConversionOptions, ConversionResult
-- `GltfLoader.hpp/cpp` - GLTF/GLB loading with transform hierarchy
-- `PlyIO.hpp/cpp` - Standard, PBR, and Compressed PLY formats
-- `TextureSampler.hpp/cpp` - Bilinear sampling with sRGB conversion
-
-### Phase 3: CPU Backend ✓
-
-- `Rasterizer.hpp/cpp` - UV-space triangle rasterization with barycentric interpolation
-- `CPUConverter.hpp/cpp` - Full pipeline with Jacobian-based scale computation
-
-### Phase 4: GPU Backend ✓
-
-- `HeadlessContext.hpp/cpp` - Platform-specific (EGL/CGL) headless OpenGL 4.1
-- `ShaderManager.hpp/cpp` - Embedded GLSL 410 shaders (VS/GS/FS)
-- `GPUConverter.hpp/cpp` - MRT rendering to 6 float textures
-
-**Bug Fixes Applied:**
-- Fixed `flat` qualifier mismatch between GS outputs and FS inputs
-
-### Phase 5: Converter Interface ✓
-
-- `Converter.hpp/cpp` - Factory with auto-detection, error propagation
-
-### Phase 6: Python Bindings ✓
-
-- `Bindings.cpp` - Full pybind11 module with all types exposed
-- `__init__.py` - Package init with import error handling
-
-**Types Exposed:**
-- Enums: `Backend`, `PlyFormat`
-- Classes: `Gaussian`, `ConversionOptions`, `ConversionResult`, `Converter`, `PlyIO`, `GltfLoader`, `Scene`, `Mesh`, `Material`, `Face`, `BBox`
-- Functions: `convert()`, `get_version()`, `get_build_info()`, `gaussians_to_numpy()`
-
-### Phase 7: Testing ✓
-
-- `example.py` - Complete usage example
-- Tested with `small_lpg_tank_4k.gltf`
+| Image | Base | glibc | Python Versions |
+|-------|------|-------|-----------------|
+| manylinux2014 | CentOS 7 | 2.17+ | 3.10, 3.11, 3.12 |
+| manylinux_2_28 | AlmaLinux 8 | 2.28+ | 3.10, 3.11, 3.12 |
+| debian12 | Debian Bookworm | 2.36 | 3.11 |
+| ubuntu2204 | Ubuntu 22.04 | 2.35 | 3.10 |
+| ubuntu2404 | Ubuntu 24.04 | 2.39 | 3.12 |
 
 ---
 
 ## Python API
 
+### Enums
+
 ```python
-import mesh2splat
+mesh2splat.Backend.Auto     # Auto-detect (default)
+mesh2splat.Backend.CPU      # Force CPU
+mesh2splat.Backend.GPU      # Force GPU
 
-# Check build info
-print(mesh2splat.get_build_info())
-# Output: mesh2splat v1.0.0 (GPU+CPU) [macOS]
+mesh2splat.RasterizationMode.UV         # UV-space rasterization
+mesh2splat.RasterizationMode.Projection # Orthogonal projection
 
-# Check available backends
-print(mesh2splat.Converter.get_available_backends())
-# Output: [Backend.CPU, Backend.GPU]
-
-# Create converter (auto-selects GPU if available)
-converter = mesh2splat.Converter()  # or Backend.CPU / Backend.GPU
-print(f"Using: {converter.get_active_backend()}")
-
-# Option 1: Direct file conversion
-result = converter.convert_file("model.gltf", options)
-
-# Option 2: Load then convert
-loader = mesh2splat.GltfLoader()
-scene = loader.load("model.gltf")
-result = converter.convert(scene, options)
-
-# Check results
-print(f"Success: {result.success}")
-print(f"Gaussians: {result.total_gaussians}")
-print(f"Time: {result.conversion_time_ms:.1f} ms")
-
-# Export to PLY
-mesh2splat.PlyIO.save("output.ply", result.gaussians, mesh2splat.PlyFormat.Standard)
-
-# Get as numpy arrays
-arrays = result.to_numpy()
-positions = arrays["positions"]  # (N, 3)
-colors = arrays["colors"]        # (N, 3) - SH0 coefficients
-scales = arrays["scales"]        # (N, 3)
-rotations = arrays["rotations"]  # (N, 4) - wxyz quaternion
+mesh2splat.PlyFormat.Standard    # Standard 3DGS PLY
+mesh2splat.PlyFormat.PBR         # With metallic/roughness/ao
+mesh2splat.PlyFormat.Compressed  # Compact format
 ```
 
 ### ConversionOptions
 
 ```python
 options = mesh2splat.ConversionOptions()
-options.resolution = 512           # UV rasterization resolution
-options.backend = Backend.Auto     # Auto, CPU, or GPU
-options.ply_format = PlyFormat.Standard
-options.scale_multiplier = 1.0
-options.srgb_conversion = True
-options.verbose = False
+options.resolution = 512                # UV rasterization resolution
+options.backend = Backend.Auto          # Backend selection
+options.rasterization_mode = RasterizationMode.UV  # Rasterization method
+options.ply_format = PlyFormat.Standard # Output format
+options.scale_multiplier = 1.0          # Gaussian scale factor
+options.srgb_conversion = True          # Convert to linear color
+options.verbose = False                 # Debug output
+```
+
+### Converter
+
+```python
+converter = mesh2splat.Converter()  # Auto-detect backend
+converter = mesh2splat.Converter(mesh2splat.Backend.GPU)  # Force GPU
+
+# Get backend info
+print(converter.get_active_backend())
+print(mesh2splat.Converter.get_available_backends())
+
+# Convert file
+result = converter.convert_file("model.gltf", options)
+
+# Convert loaded scene
+loader = mesh2splat.GltfLoader()
+scene = loader.load("model.gltf")
+result = converter.convert(scene, options)
+```
+
+### ConversionResult
+
+```python
+result.success            # bool
+result.error_message      # str (if failed)
+result.total_gaussians    # int
+result.conversion_time_ms # float
+result.gaussians          # list[Gaussian]
+
+# Export to numpy
+arrays = result.to_numpy()
+positions = arrays["positions"]   # (N, 3) float32
+colors = arrays["colors"]         # (N, 3) float32 - SH0
+scales = arrays["scales"]         # (N, 3) float32
+rotations = arrays["rotations"]   # (N, 4) float32 - wxyz
+opacities = arrays["opacities"]   # (N,) float32
+normals = arrays["normals"]       # (N, 3) float32
+```
+
+### PlyIO
+
+```python
+# Save
+mesh2splat.PlyIO.save("output.ply", result.gaussians)
+mesh2splat.PlyIO.save("output.ply", result.gaussians, mesh2splat.PlyFormat.PBR)
+
+# Load
+gaussians = mesh2splat.PlyIO.load("input.ply")
 ```
 
 ---
 
 ## Gaussian Data Layout
-
-The `Gaussian` struct stores SH0 color coefficients (not raw RGB):
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -198,82 +245,85 @@ The `Gaussian` struct stores SH0 color coefficients (not raw RGB):
 | r, g, b | float | SH0 color coefficients |
 | opacity | float | Opacity (0-1) |
 | scale_x, scale_y, scale_z | float | Gaussian scales |
-| rot_w, rot_x, rot_y, rot_z | float | Rotation quaternion |
+| rot_w, rot_x, rot_y, rot_z | float | Rotation quaternion (wxyz) |
 | nx, ny, nz | float | Surface normal |
 | metallic, roughness, ao | float | PBR properties |
 
-**PLY Format Notes:**
-- Standard format: Colors stored as `f_dc_0/1/2` (SH0), opacity as logit, scales as log
-- Compressed format: Colors as uint8 RGB, normals as octahedral-encoded uint8
+### PLY Format Notes
+
+- Colors stored as `f_dc_0/1/2` (SH0 coefficients)
+- Opacity stored as logit (inverse sigmoid)
+- Scales stored as log
 
 ---
 
-## Build Commands
+## Implementation Phases
 
-```bash
-# Setup (one time)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+### Phase 0: Environment Setup
+- `requirements.txt`, `.gitignore`, `models/` ignore
 
-# Build with GPU (default)
-mkdir build && cd build
-cmake .. -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_BUILD_TYPE=Release
-make -j8 _mesh2splat
+### Phase 1: CMake Configuration  
+- `BUILD_PYTHON_BINDINGS`, `MESH2SPLAT_ENABLE_GPU` options
+- `MESH2SPLAT_STANDALONE_PYTHON` for pip builds
 
-# CPU-only build
-cmake .. -DBUILD_PYTHON_BINDINGS=ON -DMESH2SPLAT_ENABLE_GPU=OFF
+### Phase 2: Core Types
+- `Types.hpp/cpp` - Gaussian, Scene, Mesh, RasterizationMode
+- `GltfLoader.hpp/cpp` - GLTF/GLB loading
+- `PlyIO.hpp/cpp` - PLY I/O with proper SH0/logit encoding
+- `TextureSampler.hpp/cpp` - Bilinear sampling
 
-# Test
-cd python
-python -c "import mesh2splat; print(mesh2splat.get_build_info())"
-python example.py
-```
+### Phase 3: CPU Backend
+- `Rasterizer.hpp/cpp` - UV and Projection modes
+- `CPUConverter.hpp/cpp` - Full pipeline
+
+### Phase 4: GPU Backend
+- `HeadlessContext.hpp/cpp` - EGL (Linux) / CGL (macOS)
+- `ShaderManager.hpp/cpp` - GLSL 410 shaders with mode uniform
+- `GPUConverter.hpp/cpp` - MRT rendering
+
+### Phase 5: Converter Interface
+- `Converter.hpp/cpp` - Factory with auto-detection
+
+### Phase 6: Python Bindings
+- `Bindings.cpp` - pybind11 module
+- `__init__.py` - Package init
+
+### Phase 7: Pip Package
+- `pyproject.toml` - scikit-build-core config
+- Updated CMakeLists.txt for standalone builds
+
+### Phase 8: Docker Builds
+- Dockerfiles for 5 Linux distributions
+- `build.sh` orchestration script
+- `Makefile` with all targets
 
 ---
 
 ## Known Limitations
 
-1. **macOS GPU**: Uses deprecated OpenGL via CGL. Works but generates deprecation warnings. Metal backend would be needed for long-term macOS GPU support.
+1. **macOS GPU**: Uses deprecated OpenGL via CGL. Works but generates warnings.
 
-2. **Gaussian Count Difference**: CPU and GPU backends produce different gaussian counts due to different rasterization approaches:
-   - CPU: Rasterizes in original UV space
-   - GPU: Uses orthogonal projection based on face orientation
+2. **Rasterization Mode Differences**: UV mode produces consistent results between CPU/GPU (~0.3% difference). Projection mode differs more due to implementation details.
 
-3. **Linux**: EGL backend implemented but not yet tested.
+3. **Linux GPU**: EGL backend implemented but requires actual GPU hardware at runtime.
 
 ---
 
-## Files Implemented
+## Documentation
 
-| # | File | Lines | Status |
-|---|------|-------|--------|
-| 1 | `requirements.txt` | 12 | ✓ |
-| 2 | `.gitignore` | (modified) | ✓ |
-| 3 | `CMakeLists.txt` | (modified) | ✓ |
-| 4 | `python/CMakeLists.txt` | ~100 | ✓ |
-| 5 | `python/mesh2splat/__init__.py` | ~70 | ✓ |
-| 6 | `python/example.py` | ~50 | ✓ |
-| 7 | `python/src/mesh2splat/core/Types.hpp` | ~230 | ✓ |
-| 8 | `python/src/mesh2splat/core/Types.cpp` | ~150 | ✓ |
-| 9 | `python/src/mesh2splat/core/GltfLoader.hpp` | ~50 | ✓ |
-| 10 | `python/src/mesh2splat/core/GltfLoader.cpp` | ~450 | ✓ |
-| 11 | `python/src/mesh2splat/core/PlyIO.hpp` | ~50 | ✓ |
-| 12 | `python/src/mesh2splat/core/PlyIO.cpp` | ~420 | ✓ |
-| 13 | `python/src/mesh2splat/core/TextureSampler.hpp` | ~50 | ✓ |
-| 14 | `python/src/mesh2splat/core/TextureSampler.cpp` | ~150 | ✓ |
-| 15 | `python/src/mesh2splat/cpu/Rasterizer.hpp` | ~80 | ✓ |
-| 16 | `python/src/mesh2splat/cpu/Rasterizer.cpp` | ~250 | ✓ |
-| 17 | `python/src/mesh2splat/cpu/CPUConverter.hpp` | ~40 | ✓ |
-| 18 | `python/src/mesh2splat/cpu/CPUConverter.cpp` | ~165 | ✓ |
-| 19 | `python/src/mesh2splat/gpu/HeadlessContext.hpp` | ~50 | ✓ |
-| 20 | `python/src/mesh2splat/gpu/HeadlessContext.cpp` | ~300 | ✓ |
-| 21 | `python/src/mesh2splat/gpu/ShaderManager.hpp` | ~50 | ✓ |
-| 22 | `python/src/mesh2splat/gpu/ShaderManager.cpp` | ~500 | ✓ |
-| 23 | `python/src/mesh2splat/gpu/GPUConverter.hpp` | ~50 | ✓ |
-| 24 | `python/src/mesh2splat/gpu/GPUConverter.cpp` | ~530 | ✓ |
-| 25 | `python/src/mesh2splat/Converter.hpp` | ~60 | ✓ |
-| 26 | `python/src/mesh2splat/Converter.cpp` | ~275 | ✓ |
-| 27 | `python/src/mesh2splat/Bindings.cpp` | ~310 | ✓ |
+- **PLAN.md** - This implementation plan
+- **GUIDE.md** - Docker build guide
+- **BUILD_PYTHON.md** - Python wheel build guide
+- **README.md** - Project overview (existing)
 
-**Total: ~4,400 lines of code**
+---
+
+## Files Summary
+
+| Category | Files | Lines |
+|----------|-------|-------|
+| Python bindings source | 27 | ~4,400 |
+| Build configuration | 4 | ~450 |
+| Docker files | 6 | ~300 |
+| Documentation | 3 | ~700 |
+| **Total** | **40** | **~5,850** |
