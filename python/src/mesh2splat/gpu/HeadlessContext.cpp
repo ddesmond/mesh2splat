@@ -120,6 +120,7 @@ bool HeadlessContext::isAvailable() {
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GL/gl.h>
+#include "GLLoader.hpp"
 
 namespace mesh2splat {
 
@@ -132,6 +133,7 @@ public:
     std::string errorMessage_;
     int majorVersion_ = 4;
     int minorVersion_ = 1;
+    bool glFunctionsLoaded_ = false;
     
     Impl(int majorVersion, int minorVersion)
         : majorVersion_(majorVersion), minorVersion_(minorVersion) {
@@ -244,10 +246,23 @@ public:
             return false;
         }
         // Try with surface first, then without
+        bool success = false;
         if (surface_ != EGL_NO_SURFACE) {
-            return eglMakeCurrent(display_, surface_, surface_, context_) == EGL_TRUE;
+            success = eglMakeCurrent(display_, surface_, surface_, context_) == EGL_TRUE;
+        } else {
+            success = eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, context_) == EGL_TRUE;
         }
-        return eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, context_) == EGL_TRUE;
+        
+        // Load GL functions on first successful makeCurrent
+        if (success && !glFunctionsLoaded_) {
+            if (!gl::loadGLFunctions()) {
+                errorMessage_ = "Failed to load OpenGL functions";
+                return false;
+            }
+            glFunctionsLoaded_ = true;
+        }
+        
+        return success;
     }
     
     void release() {

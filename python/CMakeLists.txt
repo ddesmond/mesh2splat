@@ -24,6 +24,7 @@ if(MESH2SPLAT_ENABLE_GPU)
         src/mesh2splat/gpu/HeadlessContext.cpp
         src/mesh2splat/gpu/ShaderManager.cpp
         src/mesh2splat/gpu/GPUConverter.cpp
+        src/mesh2splat/gpu/GLLoader.cpp
     )
 endif()
 

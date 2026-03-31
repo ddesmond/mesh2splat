@@ -10,13 +10,8 @@
 #include <sstream>
 #include <cstring>
 
-// Platform-specific OpenGL headers
-#if defined(__APPLE__)
-    #include <OpenGL/gl3.h>
-#elif defined(__linux__)
-    #include <GL/gl.h>
-    #include <GL/glext.h>
-#endif
+// Use our GL loader which handles platform differences
+#include "GLLoader.hpp"
 
 namespace mesh2splat {
 

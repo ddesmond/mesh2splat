@@ -2,6 +2,7 @@
 # =======================================
 #
 # Usage:
+#   make dev-env            # Setup development environment (uv + Python 3.10-3.12)
 #   make wheels-macos       # Build macOS wheels (Python 3.10, 3.11, 3.12)
 #   make wheels-linux       # Build all Linux wheels via Docker
 #   make wheels-linux-manylinux2014  # Build specific Linux distro
@@ -9,14 +10,14 @@
 #   make clean              # Clean build artifacts
 #   make test               # Test installed wheel
 
-.PHONY: all clean wheels-macos wheels-linux wheels-all test help \
+.PHONY: all clean wheels-macos wheels-linux wheels-all test help dev-env \
         wheels-linux-manylinux2014 wheels-linux-manylinux_2_28 \
         wheels-linux-debian12 wheels-linux-ubuntu2204 wheels-linux-ubuntu2404
 
-# Python versions to build for macOS
-PYTHON310 ?= python3.10
-PYTHON311 ?= python3.11
-PYTHON312 ?= python3.12
+# Python versions to build for macOS (use uv-managed pythons if available)
+PYTHON310 ?= $(shell uv python find 3.10 2>/dev/null || echo python3.10)
+PYTHON311 ?= $(shell uv python find 3.11 2>/dev/null || echo python3.11)
+PYTHON312 ?= $(shell uv python find 3.12 2>/dev/null || echo python3.12)
 
 # Directories
 DIST_DIR := dist
@@ -29,6 +30,9 @@ all: help
 help:
 	@echo "Mesh2Splat Wheel Builder"
 	@echo "========================"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make dev-env               Setup dev environment (uv + Python 3.10-3.12)"
 	@echo ""
 	@echo "macOS targets:"
 	@echo "  make wheels-macos          Build wheels for Python 3.10, 3.11, 3.12"
@@ -48,11 +52,6 @@ help:
 	@echo "  make wheels-all            Build all platforms"
 	@echo "  make clean                 Clean build artifacts"
 	@echo "  make test                  Test wheel import"
-	@echo ""
-	@echo "Environment variables:"
-	@echo "  PYTHON310=/path/to/python3.10"
-	@echo "  PYTHON311=/path/to/python3.11"
-	@echo "  PYTHON312=/path/to/python3.12"
 
 # ============================================================================
 # macOS Builds
@@ -64,22 +63,19 @@ $(DIST_MACOS):
 .PHONY: wheels-macos-3.10
 wheels-macos-3.10: $(DIST_MACOS)
 	@echo "Building wheel for Python 3.10..."
-	$(PYTHON310) -m pip install --upgrade build scikit-build-core pybind11 -q
-	$(PYTHON310) -m build --wheel -o $(DIST_MACOS)
+	uv build --python 3.10 --wheel -o $(DIST_MACOS)
 	@echo "Done: $$(ls $(DIST_MACOS)/*cp310*.whl 2>/dev/null | tail -1)"
 
 .PHONY: wheels-macos-3.11
 wheels-macos-3.11: $(DIST_MACOS)
 	@echo "Building wheel for Python 3.11..."
-	$(PYTHON311) -m pip install --upgrade build scikit-build-core pybind11 -q
-	$(PYTHON311) -m build --wheel -o $(DIST_MACOS)
+	uv build --python 3.11 --wheel -o $(DIST_MACOS)
 	@echo "Done: $$(ls $(DIST_MACOS)/*cp311*.whl 2>/dev/null | tail -1)"
 
 .PHONY: wheels-macos-3.12
 wheels-macos-3.12: $(DIST_MACOS)
 	@echo "Building wheel for Python 3.12..."
-	$(PYTHON312) -m pip install --upgrade build scikit-build-core pybind11 -q
-	$(PYTHON312) -m build --wheel -o $(DIST_MACOS)
+	uv build --python 3.12 --wheel -o $(DIST_MACOS)
 	@echo "Done: $$(ls $(DIST_MACOS)/*cp312*.whl 2>/dev/null | tail -1)"
 
 wheels-macos: wheels-macos-3.10 wheels-macos-3.11 wheels-macos-3.12
@@ -147,7 +143,7 @@ wheels-all: wheels-macos wheels-linux
 
 test:
 	@echo "Testing mesh2splat import..."
-	python3 -c "import mesh2splat; print(f'Version: {mesh2splat.__version__}'); print(f'Build: {mesh2splat.get_build_info()}')"
+	uv run python -c "import mesh2splat; print(f'Version: {mesh2splat.__version__}'); print(f'Build: {mesh2splat.get_build_info()}')"
 
 clean:
 	rm -rf build/
@@ -162,12 +158,38 @@ clean:
 # Development helpers
 # ============================================================================
 
+.PHONY: dev-env
+dev-env:
+	@echo "Setting up development environment..."
+	@echo ""
+	@echo "1. Initializing git submodules..."
+	git submodule update --init --recursive
+	@echo ""
+	@echo "2. Installing Python versions via uv..."
+	uv python install 3.10 3.11 3.12
+	@echo ""
+	@echo "3. Creating virtual environment with uv..."
+	uv venv --python 3.12 .venv
+	@echo ""
+	@echo "4. Installing build dependencies..."
+	uv pip install --python .venv/bin/python build scikit-build-core pybind11 numpy pytest
+	@echo ""
+	@echo "========================================"
+	@echo "Development environment ready!"
+	@echo "========================================"
+	@echo ""
+	@echo "Activate with:  source .venv/bin/activate"
+	@echo ""
+	@echo "Build wheels:   make wheels-macos"
+	@echo "Dev install:    make dev-install"
+	@echo "Run tests:      make test"
+
 .PHONY: dev-install
 dev-install:
 	@echo "Installing in development mode..."
-	pip install -e . -v
+	uv pip install -e . -v
 
 .PHONY: sdist
 sdist:
 	@echo "Building source distribution..."
-	python3 -m build --sdist -o $(DIST_DIR)
+	uv run python -m build --sdist -o $(DIST_DIR)
