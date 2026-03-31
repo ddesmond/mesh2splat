@@ -486,7 +486,7 @@ namespace utils
     }
 
     std::string getExecutableDir() {
-        std::experimental::filesystem::path exePath(getExecutablePath());
+        std::filesystem::path exePath(getExecutablePath());
         return exePath.parent_path().string();
     }
 

@@ -174,9 +174,9 @@ public:
                 // UV
                 vertices[idx++] = face.uvs[v].x;
                 vertices[idx++] = face.uvs[v].y;
-                // Normalized UV (from xatlas, or compute from position)
-                vertices[idx++] = face.normalizedUvs[v].x;
-                vertices[idx++] = face.normalizedUvs[v].y;
+                // Normalized UV (from xatlas, or fallback to regular UVs)
+                vertices[idx++] = face.uvs[v].x;
+                vertices[idx++] = face.uvs[v].y;
                 // Scale (placeholder, computed in GS)
                 vertices[idx++] = 1.0f;
                 vertices[idx++] = 1.0f;
@@ -322,6 +322,16 @@ public:
                 GPUTextureData normalTex = uploadTexture(mesh.material.normalTexture);
                 GPUTextureData metalRoughTex = uploadTexture(mesh.material.metallicRoughnessTexture);
                 
+                // H16 fix: RAII guard to ensure GPU resources are cleaned up on exception
+                auto cleanupResources = [&]() {
+                    deleteMeshData(meshData);
+                    deleteTexture(albedoTex);
+                    deleteTexture(normalTex);
+                    deleteTexture(metalRoughTex);
+                };
+                
+                try {
+                
                 // Bind framebuffer and clear
                 glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_.fbo);
                 glViewport(0, 0, framebuffer_.width, framebuffer_.height);
@@ -375,11 +385,13 @@ public:
                 // Read back results from all render targets
                 readbackGaussians(result, options);
                 
-                // Cleanup mesh and textures
-                deleteMeshData(meshData);
-                deleteTexture(albedoTex);
-                deleteTexture(normalTex);
-                deleteTexture(metalRoughTex);
+                } catch (...) {
+                    cleanupResources();
+                    throw;
+                }
+                
+                // Cleanup mesh and textures (normal path)
+                cleanupResources();
             }
             
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -407,7 +419,8 @@ public:
     void readbackGaussians(ConversionResult& result, const ConversionOptions& options) {
         int w = framebuffer_.width;
         int h = framebuffer_.height;
-        int pixelCount = w * h;
+        // H13 fix: use size_t to prevent int overflow on large resolutions
+        size_t pixelCount = static_cast<size_t>(w) * static_cast<size_t>(h);
         
         // Read all 6 render targets
         std::vector<float> positionData(pixelCount * 4);
@@ -438,8 +451,8 @@ public:
         glReadPixels(0, 0, w, h, GL_RGBA, GL_FLOAT, pbrData.data());
         
         // Convert non-empty pixels to gaussians
-        for (int i = 0; i < pixelCount; i++) {
-            int base = i * 4;
+        for (size_t i = 0; i < pixelCount; i++) {
+            size_t base = i * 4;
             
             // Check if pixel has valid data (alpha > 0 in color)
             if (colorData[base + 3] < 0.01f) continue;

@@ -76,7 +76,7 @@ private:
 
 	double lastShaderCheckTime;
 
-	double gpuFrameTimeMs;
+	double gpuFrameTimeMs = 0.0;
 
 	Camera& camera;
 

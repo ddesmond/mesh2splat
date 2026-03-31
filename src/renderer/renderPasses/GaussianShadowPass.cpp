@@ -85,6 +85,15 @@ GaussianShadowPass::GaussianShadowPass(RenderContext& renderContext)
 
 }
 
+GaussianShadowPass::~GaussianShadowPass()
+{
+    if (m_shadowFBO != 0)         glDeleteFramebuffers(1, &m_shadowFBO);
+    if (m_vao != 0)               glDeleteVertexArrays(1, &m_vao);
+    if (m_vbo != 0)               glDeleteBuffers(1, &m_vbo);
+    if (m_ebo != 0)               glDeleteBuffers(1, &m_ebo);
+    if (m_indirectDrawBuffer != 0) glDeleteBuffers(1, &m_indirectDrawBuffer);
+}
+
 void GaussianShadowPass::execute(RenderContext& renderContext)
 {
     glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.0f, renderContext.nearPlane, renderContext.farPlane);
@@ -144,6 +153,9 @@ void GaussianShadowPass::execute(RenderContext& renderContext)
     unsigned int totalInvocations = renderContext.numberOfGaussians;
     if (totalInvocations == 0) {
         // No gaussians to process - skip shadow pass
+#ifdef  _DEBUG
+        glPopDebugGroup();
+#endif
         return;
     }
     unsigned int threadsPerGroup = 256;

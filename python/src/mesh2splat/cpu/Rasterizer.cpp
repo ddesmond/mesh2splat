@@ -81,7 +81,7 @@ glm::quat Rasterizer::matrixToQuaternion(const glm::mat3& m) {
         biggestIndex = 3;
     }
     
-    float biggestVal = std::sqrt(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
+    float biggestVal = std::sqrt(std::max(fourBiggestSquaredMinus1 + 1.0f, 1e-10f)) * 0.5f;
     float mult = 0.25f / biggestVal;
     
     glm::quat q;
@@ -134,6 +134,9 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
         return;
     }
     
+    // H14 fix: compute face normal from original edges BEFORE swapping
+    glm::vec3 normal = glm::normalize(cross);
+    
     // Find longest edge
     if (glm::length(edge2) > glm::length(edge1) && glm::length(edge2) > glm::length(edge3)) {
         std::swap(edge1, edge2);
@@ -143,9 +146,6 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
     
     // Normalize longest edge
     edge1 = glm::normalize(edge1);
-    
-    // Compute face normal
-    glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
     
     float absX = std::abs(normal.x);
     float absY = std::abs(normal.y);
@@ -244,6 +244,9 @@ void Rasterizer::computeFaceDataUV(const Face& face,
         return;
     }
     
+    // H14 fix: compute face normal from original edges BEFORE swapping
+    glm::vec3 normal = glm::normalize(cross);
+    
     // Find longest edge for consistent orientation (before computing normal)
     if (glm::length(edge2) > glm::length(edge1) && glm::length(edge2) > glm::length(edge3)) {
         std::swap(edge1, edge2);
@@ -253,9 +256,6 @@ void Rasterizer::computeFaceDataUV(const Face& face,
     
     // Normalize longest edge
     edge1 = glm::normalize(edge1);
-    
-    // Compute face normal (after edge swap for consistency with Projection mode)
-    glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
     
     // Compute rotation matrix from triangle orientation
     glm::vec3 xAxis = edge1;

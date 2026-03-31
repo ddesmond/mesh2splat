@@ -33,8 +33,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#include <experimental/filesystem>
+// Note: std::experimental::filesystem was previously used here but has been removed.
+// All filesystem operations now use <filesystem> (already included above).
 #define EMPTY_TEXTURE "empty_texture"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -56,7 +56,7 @@
 #endif
 
 
-static void CheckOpenGLError(const char* stmt, const char* fname, int line)
+inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
 {
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
@@ -75,7 +75,7 @@ static void CheckOpenGLError(const char* stmt, const char* fname, int line)
     #define GL_CHECK(stmt) stmt
 #endif
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 namespace utils
 {
@@ -149,7 +149,7 @@ namespace utils
     struct Gaussian3D {
         Gaussian3D(glm::vec3 position, glm::vec3 normal, glm::vec3 scale, glm::vec4 rotation, glm::vec3 RGB, float opacity, MaterialGltf material)
             : position(position), normal(normal), scale(scale), rotation(rotation), sh0(RGB), opacity(opacity), material(material) {};
-        Gaussian3D() : position(NULL), normal(NULL), scale(NULL), rotation(NULL), sh0(NULL), opacity(NULL), material(MaterialGltf()) {};
+        Gaussian3D() : position(0.0f), normal(0.0f), scale(0.0f), rotation(0.0f), sh0(0.0f), opacity(0.0f), material(MaterialGltf()) {};
         glm::vec3 position;
         glm::vec3 normal;
         glm::vec3 scale;
@@ -326,9 +326,9 @@ namespace utils
 
     std::string modelFileExtensionEnumToString(ModelFileExtension ext);
 
-    static std::string pad3(int i) { char b[8]; std::snprintf(b, sizeof(b), "%03d", i); return b; }
+    inline std::string pad3(int i) { char b[8]; std::snprintf(b, sizeof(b), "%03d", i); return b; }
 
-    static std::string makeUniquePath(const std::filesystem::path& p) {
+    inline std::string makeUniquePath(const std::filesystem::path& p) {
         namespace fs = std::filesystem;
         fs::path candidate = p;
         int n = 1;

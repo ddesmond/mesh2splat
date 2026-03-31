@@ -7,6 +7,7 @@
 #include <string>
 #include <optional> 
 #include <filesystem>
+#include <deque>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -115,7 +116,8 @@ public:
         std::string error;   // filled if failed
     };
 
-    BatchItem* popNextBatchItem();      // get next Queued -> set to Processing
+    int popNextBatchItemIndex();         // get next Queued -> set to Processing, returns index (-1 if none)
+    BatchItem& getBatchItemAt(int index);
     void markBatchItemDone(const std::string& path);  // Processing -> Done
     void markBatchItemFailed(const std::string& path, const std::string& err);
     void cancelBatch();     
@@ -193,7 +195,7 @@ private:
     int minRes = 16;
 
     //Gpu timing data
-    std::vector<float> frameTimeHistory = {0.0f};
+    std::deque<float> frameTimeHistory = {0.0f};
     static constexpr size_t MAX_FRAME_HISTORY = 100;
     double gpuFrameTime = 0;
     float maxPlotTimeMs = 100.0f; 

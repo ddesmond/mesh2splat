@@ -699,7 +699,7 @@ void SceneManager::exportPly(const std::string outputFile, unsigned int exportFo
     std::thread(
         [=, data = std::move(cpuData)]() mutable 
         {
-            parsers::savePlyVector(outputFile, data, format, scaleMultiplier, parsers::DcMode::Current, parsers::OpacityMode::Current, flipY);
+            parsers::savePlyVector(outputFile, std::move(data), format, scaleMultiplier, parsers::DcMode::Current, parsers::OpacityMode::Current, flipY);
         }
     ).detach();
     

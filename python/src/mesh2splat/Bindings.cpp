@@ -224,10 +224,12 @@ PYBIND11_MODULE(_mesh2splat, m) {
             "Create a converter with specified backend")
         .def("convert_file", &Converter::convertFile,
             py::arg("path"), py::arg("options") = ConversionOptions(),
+            py::call_guard<py::gil_scoped_release>(),
             "Load and convert a GLTF/GLB file to gaussians")
         .def("convert", [](Converter& c, const Scene& scene, const ConversionOptions& options) {
             return c.convert(scene, options);
         }, py::arg("scene"), py::arg("options") = ConversionOptions(),
+            py::call_guard<py::gil_scoped_release>(),
             "Convert a loaded scene to gaussians")
         .def("is_ready", &Converter::isReady, "Check if converter is ready")
         .def("get_active_backend", &Converter::getActiveBackend, "Get the active backend")
@@ -257,9 +259,11 @@ PYBIND11_MODULE(_mesh2splat, m) {
             py::arg("format") = PlyFormat::Standard,
             py::arg("scale_multiplier") = 1.0f,
             py::arg("flip_y") = true,
+            py::call_guard<py::gil_scoped_release>(),
             "Save gaussians to PLY file")
         .def_static("load", &PlyIO::load,
             py::arg("path"),
+            py::call_guard<py::gil_scoped_release>(),
             "Load gaussians from PLY file");
     
     //--------------------------------------------------------------------------
@@ -325,6 +329,7 @@ PYBIND11_MODULE(_mesh2splat, m) {
     py::class_<GltfLoader>(m, "GltfLoader", "GLTF/GLB file loader")
         .def(py::init<>())
         .def("load", &GltfLoader::load, py::arg("path"),
+            py::call_guard<py::gil_scoped_release>(),
             "Load a GLTF or GLB file and return a Scene");
     
     //--------------------------------------------------------------------------
@@ -337,6 +342,7 @@ PYBIND11_MODULE(_mesh2splat, m) {
         return convertMeshToSplat(input_path, output_path, options);
     }, py::arg("input_path"), py::arg("output_path"), 
        py::arg("options") = ConversionOptions(),
+       py::call_guard<py::gil_scoped_release>(),
        "Convert a mesh file to PLY splat file (convenience function)");
     
     m.def("get_version", &getVersion, "Get library version");

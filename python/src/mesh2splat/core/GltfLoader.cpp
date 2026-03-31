@@ -30,8 +30,11 @@ struct StridedAccessor {
     size_t stride;
     size_t count;
     
-    const T& operator[](size_t index) const {
-        return *reinterpret_cast<const T*>(base + index * stride);
+    // H12 fix: use memcpy to avoid UB from unaligned reinterpret_cast
+    T operator[](size_t index) const {
+        T val;
+        std::memcpy(&val, base + index * stride, sizeof(T));
+        return val;
     }
 };
 
@@ -143,8 +146,9 @@ void parseMaterial(const tinygltf::Model& model, int materialIndex, Material& ma
     }
     
     // Emissive Factor
-    auto emissiveFactorIt = material.values.find("emissiveFactor");
-    if (emissiveFactorIt != material.values.end() && emissiveFactorIt->second.number_array.size() >= 3) {
+    // H17 fix: emissiveFactor is in additionalValues, not values, in tinygltf
+    auto emissiveFactorIt = material.additionalValues.find("emissiveFactor");
+    if (emissiveFactorIt != material.additionalValues.end() && emissiveFactorIt->second.number_array.size() >= 3) {
         mat.emissiveFactor = glm::vec3(
             static_cast<float>(emissiveFactorIt->second.number_array[0]),
             static_cast<float>(emissiveFactorIt->second.number_array[1]),
@@ -304,14 +308,16 @@ Scene GltfLoader::load(const std::string& filePath) {
                 indices.resize(indicesAccessor.count);
                 
                 if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                    const uint16_t* buf = reinterpret_cast<const uint16_t*>(indexData);
                     for (size_t i = 0; i < indicesAccessor.count; i++) {
-                        indices[i] = buf[i];
+                        uint16_t val;
+                        std::memcpy(&val, indexData + i * sizeof(uint16_t), sizeof(uint16_t));
+                        indices[i] = val;
                     }
                 } else if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-                    const uint32_t* buf = reinterpret_cast<const uint32_t*>(indexData);
                     for (size_t i = 0; i < indicesAccessor.count; i++) {
-                        indices[i] = buf[i];
+                        uint32_t val;
+                        std::memcpy(&val, indexData + i * sizeof(uint32_t), sizeof(uint32_t));
+                        indices[i] = val;
                     }
                 } else if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
                     const uint8_t* buf = reinterpret_cast<const uint8_t*>(indexData);
@@ -357,13 +363,19 @@ Scene GltfLoader::load(const std::string& filePath) {
             // Parse material
             parseMaterial(model, primitive.material, mesh.material);
             
-            // Build faces
-            mesh.faces.resize(indices.size() / 3);
+            // Build faces - use push_back to avoid uninitialized entries from skipped faces
+            mesh.faces.reserve(indices.size() / 3);
             
             for (size_t i = 0; i < indices.size(); i += 3) {
-                Face& face = mesh.faces[i / 3];
                 uint32_t idx[3] = {indices[i], indices[i + 1], indices[i + 2]};
                 
+                // H15 fix: bounds-check index data against vertex count
+                if (idx[0] >= vertices.count || idx[1] >= vertices.count || idx[2] >= vertices.count) {
+                    messages_.push_back("Out-of-bounds vertex index in mesh: " + mesh.name + " (skipping face)");
+                    continue;
+                }
+                
+                Face face{};
                 for (int e = 0; e < 3; e++) {
                     // Transform position
                     glm::vec4 worldPos = worldTransform * glm::vec4(vertices[idx[e]], 1.0f);
@@ -405,6 +417,8 @@ Scene GltfLoader::load(const std::string& filePath) {
                 
                 // Accumulate surface area
                 mesh.surfaceArea += triangleArea3D(face.positions[0], face.positions[1], face.positions[2]);
+                
+                mesh.faces.push_back(face);
             }
             
             // Compute bounding box

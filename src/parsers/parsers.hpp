@@ -35,7 +35,7 @@ namespace parsers
 
 	void loadPlyFile(std::string plyFileLocation, std::vector<utils::GaussianDataSSBO>& gaussians);
 
-	void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO> gaussians_3D_list, unsigned int format, float scaleMultiplier, DcMode dcMode = DcMode::Current, OpacityMode opacityMode = OpacityMode::Current, bool flipY = false);
+	void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO>&& gaussians_3D_list, unsigned int format, float scaleMultiplier, DcMode dcMode = DcMode::Current, OpacityMode opacityMode = OpacityMode::Current, bool flipY = false);
 	
 	void writeCompressedPbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, bool flipY = false);
 

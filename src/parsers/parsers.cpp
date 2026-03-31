@@ -713,7 +713,7 @@ namespace parsers
         
     }
 
-    void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO> gaussians_3D_list, unsigned int FORMAT, float scaleMultiplier, DcMode dcMode, OpacityMode opacityMode, bool flipY)
+    void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO>&& gaussians_3D_list, unsigned int FORMAT, float scaleMultiplier, DcMode dcMode, OpacityMode opacityMode, bool flipY)
     {
         switch (FORMAT)
         {

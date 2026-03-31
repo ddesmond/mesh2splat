@@ -173,6 +173,9 @@ void main() {
     vec3 edge2 = gs_in[2].position - gs_in[0].position;
     vec3 edge3 = gs_in[2].position - gs_in[1].position;
 
+    // Compute normal from original edges BEFORE any edge swapping (H14 fix)
+    vec3 normal = normalize(cross(edge1, edge2));
+
     // Find longest edge
     if (length(edge2) > length(edge1) && length(edge2) > length(edge3)) {
         vec3 temp = edge1;
@@ -185,7 +188,6 @@ void main() {
     }
 
     edge1 = normalize(edge1);
-    vec3 normal = normalize(cross(edge1, edge2));
 
     // Compute rasterization UVs based on mode
     vec2 rasterUvs[3];

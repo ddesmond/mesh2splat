@@ -185,6 +185,9 @@ void PlyIO::writeStandard(const std::string& filename,
     }
     
     file.close();
+    if (!file) {
+        throw std::runtime_error("Failed to write PLY file (I/O error): " + filename);
+    }
 }
 
 void PlyIO::writePBR(const std::string& filename,
@@ -289,6 +292,9 @@ void PlyIO::writePBR(const std::string& filename,
     }
     
     file.close();
+    if (!file) {
+        throw std::runtime_error("Failed to write PLY file (I/O error): " + filename);
+    }
 }
 
 void PlyIO::writeCompressed(const std::string& filename,
@@ -397,6 +403,9 @@ void PlyIO::writeCompressed(const std::string& filename,
     }
     
     file.close();
+    if (!file) {
+        throw std::runtime_error("Failed to write PLY file (I/O error): " + filename);
+    }
 }
 
 std::vector<Gaussian> PlyIO::load(const std::string& filename) {

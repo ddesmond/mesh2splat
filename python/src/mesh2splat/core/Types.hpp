@@ -89,13 +89,13 @@ struct Material {
 
 /// Triangle face with all vertex attributes
 struct Face {
-    std::array<glm::vec3, 3> positions;
-    std::array<glm::vec2, 3> uvs;
-    std::array<glm::vec2, 3> normalizedUvs;  // From xatlas
-    std::array<glm::vec3, 3> normals;
-    std::array<glm::vec4, 3> tangents;
-    glm::vec3 scale;
-    glm::vec4 rotation;
+    std::array<glm::vec3, 3> positions{};
+    std::array<glm::vec2, 3> uvs{};
+    std::array<glm::vec2, 3> normalizedUvs{};  // From xatlas
+    std::array<glm::vec3, 3> normals{};
+    std::array<glm::vec4, 3> tangents{};
+    glm::vec3 scale{1.0f};
+    glm::vec4 rotation{1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion (w,x,y,z)
 };
 
 /// Axis-aligned bounding box

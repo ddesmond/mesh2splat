@@ -143,7 +143,7 @@ void ImGuiUI::renderFileSelectorWindow()
     {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string chosenFolder = ImGuiFileDialog::Instance()->GetCurrentPath();
-            destinationFilePathFolder = chosenFolder + "\\";
+            destinationFilePathFolder = (std::filesystem::path(chosenFolder) / "").string();
         }
 
         // Close the dialog
@@ -312,10 +312,16 @@ void ImGuiUI::renderGpuFrametime()
     const float history_length = 5.0f; //seconds
     const float plot_height = 100.0f;
 
+    // PlotLines with getter function for deque compatibility
+    auto getter = [](void* data, int idx) -> float {
+        auto* deq = static_cast<std::deque<float>*>(data);
+        return (*deq)[static_cast<size_t>(idx)];
+    };
     ImGui::PlotLines(
         "Frame Times",
-        frameTimeHistory.data(),
-        frameTimeHistory.size(),
+        getter,
+        &frameTimeHistory,
+        static_cast<int>(frameTimeHistory.size()),
         0,
         nullptr,
         0.0f,                   
@@ -601,9 +607,9 @@ void ImGuiUI::resetSaveAllFormats() {
 void ImGuiUI::setFrameMetrics(double gpuFrameTime) {
     this->gpuFrameTime = static_cast<float>(gpuFrameTime);
     
-    // Rolling buffer
+    // Rolling buffer - deque provides O(1) pop_front
     if(frameTimeHistory.size() >= MAX_FRAME_HISTORY) {
-        frameTimeHistory.erase(frameTimeHistory.begin());
+        frameTimeHistory.pop_front();
     }
 
     frameTimeHistory.push_back(this->gpuFrameTime);
@@ -675,18 +681,23 @@ bool ImGuiUI::hasBatchWork() const
 
 bool ImGuiUI::isBatchRunning() const { return batchRunning && !batchCancelRequested; }
 
-ImGuiUI::BatchItem* ImGuiUI::popNextBatchItem()
+int ImGuiUI::popNextBatchItemIndex()
 {
-    if (batchCancelRequested) return nullptr;
-    for (auto& it : batchItems) {
-        if (it.status == BatchItem::Status::Queued) {
-            it.status = BatchItem::Status::Processing;
-            return &it; // return pointer to live storage
+    if (batchCancelRequested) return -1;
+    for (int i = 0; i < static_cast<int>(batchItems.size()); ++i) {
+        if (batchItems[i].status == BatchItem::Status::Queued) {
+            batchItems[i].status = BatchItem::Status::Processing;
+            return i;
         }
     }
     // Nothing left
     if (batchRunning) batchRunning = false;
-    return nullptr;
+    return -1;
+}
+
+ImGuiUI::BatchItem& ImGuiUI::getBatchItemAt(int index)
+{
+    return batchItems.at(index);
 }
 
 void ImGuiUI::markBatchItemDone(const std::string& path)

@@ -180,9 +180,13 @@ void Renderer::renderFrame()
     
     if (renderContext.queryPool.size() > 5) {
         GLuint completedQuery = renderContext.queryPool.front();
-        GLuint64 elapsedTime = 0;
-        glGetQueryObjectui64v(completedQuery, GL_QUERY_RESULT, &elapsedTime);
-        this->gpuFrameTimeMs = static_cast<double>(elapsedTime) / 1e6; // ns to ms
+        GLint available = 0;
+        glGetQueryObjectiv(completedQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+        if (available) {
+            GLuint64 elapsedTime = 0;
+            glGetQueryObjectui64v(completedQuery, GL_QUERY_RESULT, &elapsedTime);
+            this->gpuFrameTimeMs = static_cast<double>(elapsedTime) / 1e6; // ns to ms
+        }
     }
 };        
 
@@ -191,6 +195,9 @@ void Renderer::updateTransformations()
 
     int width, height;
     glfwGetFramebufferSize(rendererGlfwWindow, &width, &height);
+
+    // Guard against zero-size framebuffer (e.g. window minimized)
+    if (width <= 0 || height <= 0) return;
 
     float fov = camera.GetFOV();
 
@@ -319,6 +326,13 @@ void Renderer::createDepthTexture()
        renderContext.meshDepthTexture,
        0
    );
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Depth FBO not complete!" << std::endl;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    
    glDrawBuffer(GL_NONE);
    glReadBuffer(GL_NONE);
@@ -411,11 +425,12 @@ void Renderer::deleteGBuffer()
     glDeleteTextures(1, &renderContext.gDepth);
     glDeleteTextures(1, &renderContext.gMetallicRoughness);
 
-    renderContext.gBufferFBO    = 0;
-    renderContext.gPosition     = 0;
-    renderContext.gNormal       = 0;
-    renderContext.gAlbedo       = 0;
-    renderContext.gDepth        = 0;
+    renderContext.gBufferFBO           = 0;
+    renderContext.gPosition            = 0;
+    renderContext.gNormal              = 0;
+    renderContext.gAlbedo              = 0;
+    renderContext.gDepth               = 0;
+    renderContext.gMetallicRoughness   = 0;
 }
 
 	

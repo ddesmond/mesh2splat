@@ -21,6 +21,8 @@ namespace glUtils
         {
             glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
             std::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+            glDeleteShader(shaderID);
+            return 0;
         }
 
         return shaderID;

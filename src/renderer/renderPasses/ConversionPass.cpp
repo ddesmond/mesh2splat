@@ -8,7 +8,6 @@
 //   1. Count-only pass: counts how many splats would be generated
 //   2. Write pass: allocates appropriate buffer and writes splat data
 
-#pragma once
 #include "ConversionPass.hpp"
 #include <algorithm>
 #include <cmath>
@@ -98,6 +97,7 @@ void ConversionPass::execute(RenderContext &renderContext)
     };
 
     // Two-pass conversion: count first, then write
+    // Monotonic seed for hash-based sampling (not thread-safe by design; called from main thread only)
     static uint32_t seedCounter = 1;
     const uint32_t seed = seedCounter++;
 
