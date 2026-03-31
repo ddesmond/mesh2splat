@@ -97,10 +97,11 @@ public:
                     g.scale_z = frag.scale.z * options.scaleMultiplier;
                     
                     // Rotation (from rasterizer)
-                    g.rot_x = frag.rotation.x;
-                    g.rot_y = frag.rotation.y;
-                    g.rot_z = frag.rotation.z;
-                    g.rot_w = frag.rotation.w;
+                    // frag.rotation is glm::vec4(w, x, y, z)
+                    g.rot_w = frag.rotation.x;  // .x is actually w
+                    g.rot_x = frag.rotation.y;  // .y is actually x
+                    g.rot_y = frag.rotation.z;  // .z is actually y
+                    g.rot_z = frag.rotation.w;  // .w is actually z
                     
                     // Normal (from material normal map applied to geometry normal)
                     g.nx = matSample.normal.x;

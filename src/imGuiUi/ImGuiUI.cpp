@@ -600,9 +600,8 @@ void ImGuiUI::resetSaveAllFormats() {
 
 void ImGuiUI::setFrameMetrics(double gpuFrameTime) {
     this->gpuFrameTime = static_cast<float>(gpuFrameTime);
-    this->gpuFrameTime = static_cast<float>(gpuFrameTime);
     
-    // Rolling buffer as vector
+    // Rolling buffer
     if(frameTimeHistory.size() >= MAX_FRAME_HISTORY) {
         frameTimeHistory.erase(frameTimeHistory.begin());
     }

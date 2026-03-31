@@ -69,8 +69,8 @@ bool Gaussian::isValid() const {
     if (std::isnan(x) || std::isnan(y) || std::isnan(z)) return false;
     if (std::isnan(scale_x) || std::isnan(scale_y) || std::isnan(scale_z)) return false;
     
-    // Check for zero scale (invalid gaussian)
-    if (scale_x <= 0.0f && scale_y <= 0.0f && scale_z <= 0.0f) return false;
+    // Check for zero or negative scale (invalid gaussian)
+    if (scale_x <= 0.0f || scale_y <= 0.0f || scale_z <= 0.0f) return false;
     
     // Check for invalid rotation quaternion
     float rotLen = rot_x*rot_x + rot_y*rot_y + rot_z*rot_z + rot_w*rot_w;

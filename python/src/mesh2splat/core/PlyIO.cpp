@@ -164,23 +164,24 @@ void PlyIO::writeStandard(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
         
-        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
-        float rotX, rotY, rotZ, rotW;
+        // Rotation quaternion - PLY format is rot_0=w, rot_1=x, rot_2=y, rot_3=z
+        // flipY: 180° rotation around X axis: q_flip(0,1,0,0) * q = (-x, w, -z, y)
+        float rot0, rot1, rot2, rot3;
         if (flipY) {
-            rotX = -g.rot_x;
-            rotY = g.rot_w;
-            rotZ = -g.rot_z;
-            rotW = g.rot_y;
+            rot0 = -g.rot_x;  // new w = -old x
+            rot1 = g.rot_w;   // new x = old w
+            rot2 = -g.rot_z;  // new y = -old z
+            rot3 = g.rot_y;   // new z = old y
         } else {
-            rotX = g.rot_x;
-            rotY = g.rot_y;
-            rotZ = g.rot_z;
-            rotW = g.rot_w;
+            rot0 = g.rot_w;   // w
+            rot1 = g.rot_x;   // x
+            rot2 = g.rot_y;   // y
+            rot3 = g.rot_z;   // z
         }
-        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot0), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot1), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot2), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot3), sizeof(float));
     }
     
     file.close();
@@ -267,23 +268,24 @@ void PlyIO::writePBR(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
         
-        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
-        float rotX, rotY, rotZ, rotW;
+        // Rotation quaternion - PLY format is rot_0=w, rot_1=x, rot_2=y, rot_3=z
+        // flipY: 180° rotation around X axis: q_flip(0,1,0,0) * q = (-x, w, -z, y)
+        float rot0, rot1, rot2, rot3;
         if (flipY) {
-            rotX = -g.rot_x;
-            rotY = g.rot_w;
-            rotZ = -g.rot_z;
-            rotW = g.rot_y;
+            rot0 = -g.rot_x;  // new w = -old x
+            rot1 = g.rot_w;   // new x = old w
+            rot2 = -g.rot_z;  // new y = -old z
+            rot3 = g.rot_y;   // new z = old y
         } else {
-            rotX = g.rot_x;
-            rotY = g.rot_y;
-            rotZ = g.rot_z;
-            rotW = g.rot_w;
+            rot0 = g.rot_w;   // w
+            rot1 = g.rot_x;   // x
+            rot2 = g.rot_y;   // y
+            rot3 = g.rot_z;   // z
         }
-        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot0), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot1), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot2), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot3), sizeof(float));
     }
     
     file.close();
@@ -349,23 +351,24 @@ void PlyIO::writeCompressed(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&b), sizeof(uint8_t));
         file.write(reinterpret_cast<const char*>(&a), sizeof(uint8_t));
         
-        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
-        float rotX, rotY, rotZ, rotW;
+        // Rotation quaternion - PLY format is rot_0=w, rot_1=x, rot_2=y, rot_3=z
+        // flipY: 180° rotation around X axis: q_flip(0,1,0,0) * q = (-x, w, -z, y)
+        float rot0, rot1, rot2, rot3;
         if (flipY) {
-            rotX = -g.rot_x;
-            rotY = g.rot_w;
-            rotZ = -g.rot_z;
-            rotW = g.rot_y;
+            rot0 = -g.rot_x;  // new w = -old x
+            rot1 = g.rot_w;   // new x = old w
+            rot2 = -g.rot_z;  // new y = -old z
+            rot3 = g.rot_y;   // new z = old y
         } else {
-            rotX = g.rot_x;
-            rotY = g.rot_y;
-            rotZ = g.rot_z;
-            rotW = g.rot_w;
+            rot0 = g.rot_w;   // w
+            rot1 = g.rot_x;   // x
+            rot2 = g.rot_y;   // y
+            rot3 = g.rot_z;   // z
         }
-        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot0), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot1), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot2), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rot3), sizeof(float));
         
         // Scale (log space with safe log, using min of x,y for z)
         float sx = safeLog(g.scale_x * scaleMultiplier);

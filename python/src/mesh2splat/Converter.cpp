@@ -270,7 +270,8 @@ bool convertMeshToSplat(const std::string& inputPath,
     }
     
     // Save to PLY
-    PlyIO::save(outputPath, result.gaussians, options.plyFormat);
+    PlyIO::save(outputPath, result.gaussians, options.plyFormat, 
+                options.scaleMultiplier, options.flipY);
     return true;
 }
 

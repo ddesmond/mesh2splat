@@ -114,6 +114,10 @@ Renderer::~Renderer()
     glDeleteBuffers(1, &(renderContext.valuesBuffer));
     glDeleteBuffers(1, &(renderContext.perQuadTransformationBufferSorted));
     glDeleteBuffers(1, &(renderContext.gaussianDepthPostFiltering));
+    glDeleteBuffers(1, &(renderContext.perQuadTransformationsBuffer));
+    glDeleteBuffers(1, &(renderContext.atomicCounterBuffer));
+    glDeleteBuffers(1, &(renderContext.atomicCounterBufferConversionPass));
+    glDeleteBuffers(1, &(renderContext.conversionDebugCounters));
 
     deleteMeshGBuffer();
 

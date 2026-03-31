@@ -499,6 +499,9 @@ void SceneManager::setupMeshBuffers(std::vector<utils::Mesh>& meshes)
         utils::GLMesh glMesh;
         std::vector<float> vertices;  
         float meshSurface = 0;
+        // Reset per-mesh bounding box (must be inside loop to avoid accumulating across meshes)
+        minBB = glm::vec3(FLT_MAX);
+        maxBB = glm::vec3(-FLT_MAX);
         for (const auto& face : mesh.faces) {
             for (int i = 0; i < 3; ++i) { // Assuming each face is a triangle (and it must be as we are only reading .gltf/.glb files)
                 // Position

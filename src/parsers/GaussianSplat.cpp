@@ -252,6 +252,12 @@ MergedGaussian mergeGaussians(const std::vector<MergedGaussian>& gaussiansToMerg
 
 MergedGaussian mergeChildGaussians(const std::vector<MergedGaussian>& childGaussians, float mergingConstant)
 {
+	if (childGaussians.empty())
+	{
+		// Return a default/invalid gaussian
+		MergedGaussian empty{};
+		return empty;
+	}
 	if (childGaussians.size() > 1)
 	{
 		return mergeGaussians(childGaussians, mergingConstant);

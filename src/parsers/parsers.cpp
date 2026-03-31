@@ -94,18 +94,21 @@ namespace parsers
             textureWidth = new_width;
             textureHeight = new_height;
     
-            // Save the resized image
-            //stbi_write_png(resized_texture_name_location.c_str(), new_width, new_height, bpp, resized_data, new_width * bpp);
+            // Free the original image
             stbi_image_free(image);
             std::cout << "\nImage: " << resized_texture_name_location << "  width: " << textureWidth << "  height: " << textureHeight << " BPP:" << bpp << "\n" << std::endl;
     
-            //return utils::TextureDataGl(resized_data, bpp);
-            return utils::TextureDataGl({}, bpp);
+            // Convert resized_data to vector and return
+            std::vector<unsigned char> resizedVec(resized_data, resized_data + new_width * new_height * bpp);
+            delete[] resized_data;
+            return utils::TextureDataGl(std::move(resizedVec), bpp);
             
         }
-        return utils::TextureDataGl({}, bpp);
-
-        //return utils::TextureDataGl(image, bpp);
+        
+        // Convert original image to vector and return
+        std::vector<unsigned char> imageVec(image, image + textureWidth * textureHeight * bpp);
+        stbi_image_free(image);
+        return utils::TextureDataGl(std::move(imageVec), bpp);
     }
 
     //Factors taken from: https://gist.github.com/SubhiH/b34e74ffe4fd1aab046bcf62b7f12408
@@ -113,10 +116,16 @@ namespace parsers
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 int index = (y * width + x) * channels;
-                unsigned char r = src[index + 0];
-                unsigned char g = src[index + 1];
-                unsigned char b = src[index + 2];
-                unsigned char gray = static_cast<unsigned char>(0.11 * r + 0.59 * g + 0.3 * b);
+                unsigned char gray;
+                if (channels >= 3) {
+                    unsigned char r = src[index + 0];
+                    unsigned char g = src[index + 1];
+                    unsigned char b = src[index + 2];
+                    gray = static_cast<unsigned char>(0.11 * r + 0.59 * g + 0.3 * b);
+                } else {
+                    // For 1 or 2 channel images, just use the first channel
+                    gray = src[index];
+                }
                 dst[y * width + x] = gray;
             }
         }
@@ -381,8 +390,10 @@ namespace parsers
     //Should do it in shader...
     inline glm::vec2 OctWrap(const glm::vec2& v)
     {
-        glm::vec2 vecOne(1.0);
-        return (vecOne - glm::abs(glm::vec2(v.y, v.x))) * (v.x >= 0 && v.y >= 0 ? vecOne : glm::vec2(-1));
+        glm::vec2 result;
+        result.x = (1.0f - std::abs(v.y)) * (v.x >= 0.0f ? 1.0f : -1.0f);
+        result.y = (1.0f - std::abs(v.x)) * (v.y >= 0.0f ? 1.0f : -1.0f);
+        return result;
     }
 
     inline glm::vec2 EncodeOcta(const glm::vec3& normal)

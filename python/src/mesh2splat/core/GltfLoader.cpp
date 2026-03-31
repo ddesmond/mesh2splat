@@ -16,19 +16,37 @@
 #include <functional>
 #include <cstring>
 #include <algorithm>
+#include <optional>
 #include <filesystem>
 
 namespace mesh2splat {
 
 namespace {
 
-// Helper to get buffer data from tinygltf accessor
+// Helper struct for strided buffer access (supports interleaved vertex data)
 template <typename T>
-const T* getBufferData(const tinygltf::Model& model, int accessorIndex) {
+struct StridedAccessor {
+    const unsigned char* base;
+    size_t stride;
+    size_t count;
+    
+    const T& operator[](size_t index) const {
+        return *reinterpret_cast<const T*>(base + index * stride);
+    }
+};
+
+// Helper to get strided buffer data from tinygltf accessor
+template <typename T>
+StridedAccessor<T> getBufferData(const tinygltf::Model& model, int accessorIndex) {
     const auto& accessor = model.accessors[accessorIndex];
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     const auto& buffer = model.buffers[bufferView.buffer];
-    return reinterpret_cast<const T*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+    
+    // byteStride = 0 means tightly packed (default to sizeof(T))
+    size_t stride = bufferView.byteStride > 0 ? bufferView.byteStride : sizeof(T);
+    const unsigned char* base = &buffer.data[bufferView.byteOffset + accessor.byteOffset];
+    
+    return StridedAccessor<T>{base, stride, accessor.count};
 }
 
 // Parse texture info from material
@@ -321,17 +339,17 @@ Scene GltfLoader::load(const std::string& filePath) {
             // Get vertex data
             auto vertices = getBufferData<glm::vec3>(model, primitive.attributes.at("POSITION"));
             
-            const glm::vec3* normals = nullptr;
+            std::optional<StridedAccessor<glm::vec3>> normals;
             if (primitive.attributes.count("NORMAL")) {
                 normals = getBufferData<glm::vec3>(model, primitive.attributes.at("NORMAL"));
             }
             
-            const glm::vec2* uvs = nullptr;
+            std::optional<StridedAccessor<glm::vec2>> uvs;
             if (primitive.attributes.count("TEXCOORD_0")) {
                 uvs = getBufferData<glm::vec2>(model, primitive.attributes.at("TEXCOORD_0"));
             }
             
-            const glm::vec4* tangents = nullptr;
+            std::optional<StridedAccessor<glm::vec4>> tangents;
             if (primitive.attributes.count("TANGENT")) {
                 tangents = getBufferData<glm::vec4>(model, primitive.attributes.at("TANGENT"));
             }
@@ -353,20 +371,20 @@ Scene GltfLoader::load(const std::string& filePath) {
                     
                     // UV
                     if (uvs) {
-                        face.uvs[e] = uvs[idx[e]];
+                        face.uvs[e] = (*uvs)[idx[e]];
                     } else {
                         face.uvs[e] = glm::vec2(0.0f);
                     }
                     
                     // Normal
                     if (normals) {
-                        face.normals[e] = glm::normalize(normalMatrix * normals[idx[e]]);
+                        face.normals[e] = glm::normalize(normalMatrix * (*normals)[idx[e]]);
                     }
                     
                     // Tangent
                     if (tangents) {
-                        glm::vec3 tVec = glm::normalize(glm::mat3(worldTransform) * glm::vec3(tangents[idx[e]]));
-                        face.tangents[e] = glm::vec4(tVec, tangents[idx[e]].w);
+                        glm::vec3 tVec = glm::normalize(glm::mat3(worldTransform) * glm::vec3((*tangents)[idx[e]]));
+                        face.tangents[e] = glm::vec4(tVec, (*tangents)[idx[e]].w);
                     }
                 }
                 

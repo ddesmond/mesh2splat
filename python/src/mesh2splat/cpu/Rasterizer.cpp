@@ -121,6 +121,19 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
     glm::vec3 edge2 = face.positions[2] - face.positions[0];
     glm::vec3 edge3 = face.positions[2] - face.positions[1];
     
+    // Check for degenerate triangle (cross product would be zero/near-zero)
+    glm::vec3 cross = glm::cross(edge1, edge2);
+    float crossLen = glm::length(cross);
+    if (crossLen < 1e-8f) {
+        // Degenerate triangle - return safe defaults
+        outScale = glm::vec3(1e-7f);
+        outRotation = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);  // identity quaternion (w,x,y,z)
+        for (int i = 0; i < 3; i++) {
+            outRasterUvs[i] = glm::vec2(0.0f);
+        }
+        return;
+    }
+    
     // Find longest edge
     if (glm::length(edge2) > glm::length(edge1) && glm::length(edge2) > glm::length(edge3)) {
         std::swap(edge1, edge2);
@@ -220,6 +233,16 @@ void Rasterizer::computeFaceDataUV(const Face& face,
     glm::vec3 edge1 = face.positions[1] - face.positions[0];
     glm::vec3 edge2 = face.positions[2] - face.positions[0];
     glm::vec3 edge3 = face.positions[2] - face.positions[1];
+    
+    // Check for degenerate triangle (cross product would be zero/near-zero)
+    glm::vec3 cross = glm::cross(edge1, edge2);
+    float crossLen = glm::length(cross);
+    if (crossLen < 1e-8f) {
+        // Degenerate triangle - return safe defaults
+        outScale = glm::vec3(1e-7f);
+        outRotation = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);  // identity quaternion (w,x,y,z)
+        return;
+    }
     
     // Find longest edge for consistent orientation (before computing normal)
     if (glm::length(edge2) > glm::length(edge1) && glm::length(edge2) > glm::length(edge3)) {
