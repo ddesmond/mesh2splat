@@ -71,6 +71,11 @@ if(MESH2SPLAT_ENABLE_GPU)
     endif()
 endif()
 
+# Static linking for portable Linux wheels (avoid GLIBC/GLIBCXX version issues)
+if(UNIX AND NOT APPLE)
+    target_link_options(_mesh2splat PRIVATE -static-libstdc++ -static-libgcc)
+endif()
+
 # For local development: output to python package directory
 if(NOT MESH2SPLAT_STANDALONE_PYTHON)
     set_target_properties(_mesh2splat PROPERTIES
