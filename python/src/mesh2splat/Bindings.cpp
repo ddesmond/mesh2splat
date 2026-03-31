@@ -148,6 +148,8 @@ PYBIND11_MODULE(_mesh2splat, m) {
             "Opacity encoding mode (default: Logit)")
         .def_readwrite("verbose", &ConversionOptions::verbose,
             "Enable verbose logging (default: False)")
+        .def_readwrite("flip_y", &ConversionOptions::flipY,
+            "Apply 180-degree X-axis rotation for SuperSplat/viewer compatibility (default: True)")
         .def("__repr__", [](const ConversionOptions& o) {
             std::string mode_str = (o.rasterizationMode == RasterizationMode::UV) ? "UV" : "Projection";
             return "<ConversionOptions resolution=" + std::to_string(o.resolution) + 
@@ -254,6 +256,7 @@ PYBIND11_MODULE(_mesh2splat, m) {
             py::arg("path"), py::arg("gaussians"), 
             py::arg("format") = PlyFormat::Standard,
             py::arg("scale_multiplier") = 1.0f,
+            py::arg("flip_y") = true,
             "Save gaussians to PLY file")
         .def_static("load", &PlyIO::load,
             py::arg("path"),

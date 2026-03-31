@@ -201,6 +201,9 @@ struct ConversionOptions {
     // Opacity encoding mode
     OpacityMode opacityMode = OpacityMode::Logit;
     
+    // Flip Y axis for SuperSplat compatibility (180° rotation around X axis)
+    bool flipY = true;
+    
     // Verbose logging
     bool verbose = false;
 };

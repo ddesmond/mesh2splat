@@ -61,26 +61,28 @@ glm::vec2 PlyIO::encodeOctahedral(const glm::vec3& normal) {
 void PlyIO::save(const std::string& filename,
                  const std::vector<Gaussian>& gaussians,
                  PlyFormat format,
-                 float scaleMultiplier) {
+                 float scaleMultiplier,
+                 bool flipY) {
     switch (format) {
         case PlyFormat::Standard:
-            writeStandard(filename, gaussians, scaleMultiplier);
+            writeStandard(filename, gaussians, scaleMultiplier, flipY);
             break;
         case PlyFormat::PBR:
-            writePBR(filename, gaussians, scaleMultiplier);
+            writePBR(filename, gaussians, scaleMultiplier, flipY);
             break;
         case PlyFormat::Compressed:
-            writeCompressed(filename, gaussians, scaleMultiplier);
+            writeCompressed(filename, gaussians, scaleMultiplier, flipY);
             break;
         default:
-            writeStandard(filename, gaussians, scaleMultiplier);
+            writeStandard(filename, gaussians, scaleMultiplier, flipY);
             break;
     }
 }
 
 void PlyIO::writeStandard(const std::string& filename,
                           const std::vector<Gaussian>& gaussians,
-                          float scaleMultiplier) {
+                          float scaleMultiplier,
+                          bool flipY) {
     std::ofstream file(filename, std::ios::binary | std::ios::out);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open file for writing: " + filename);
@@ -124,15 +126,21 @@ void PlyIO::writeStandard(const std::string& filename,
     // Write data
     float zero = 0.0f;
     for (const auto& g : gaussians) {
-        // Position
-        file.write(reinterpret_cast<const char*>(&g.x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.z), sizeof(float));
+        // Position (flip: negate Y and Z for 180° rotation around X axis)
+        float posX = g.x;
+        float posY = flipY ? -g.y : g.y;
+        float posZ = flipY ? -g.z : g.z;
+        file.write(reinterpret_cast<const char*>(&posX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posZ), sizeof(float));
         
-        // Normal
-        file.write(reinterpret_cast<const char*>(&g.nx), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.ny), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.nz), sizeof(float));
+        // Normal (flip: negate Y and Z)
+        float normX = g.nx;
+        float normY = flipY ? -g.ny : g.ny;
+        float normZ = flipY ? -g.nz : g.nz;
+        file.write(reinterpret_cast<const char*>(&normX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&normY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&normZ), sizeof(float));
         
         // Color (already in SH0 format from converter)
         file.write(reinterpret_cast<const char*>(&g.r), sizeof(float));
@@ -156,11 +164,23 @@ void PlyIO::writeStandard(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
         
-        // Rotation quaternion
-        file.write(reinterpret_cast<const char*>(&g.rot_x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_z), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_w), sizeof(float));
+        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
+        float rotX, rotY, rotZ, rotW;
+        if (flipY) {
+            rotX = -g.rot_x;
+            rotY = g.rot_w;
+            rotZ = -g.rot_z;
+            rotW = g.rot_y;
+        } else {
+            rotX = g.rot_x;
+            rotY = g.rot_y;
+            rotZ = g.rot_z;
+            rotW = g.rot_w;
+        }
+        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
     }
     
     file.close();
@@ -168,7 +188,8 @@ void PlyIO::writeStandard(const std::string& filename,
 
 void PlyIO::writePBR(const std::string& filename,
                      const std::vector<Gaussian>& gaussians,
-                     float scaleMultiplier) {
+                     float scaleMultiplier,
+                     bool flipY) {
     std::ofstream file(filename, std::ios::binary | std::ios::out);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open file for writing: " + filename);
@@ -209,15 +230,21 @@ void PlyIO::writePBR(const std::string& filename,
     
     // Write data
     for (const auto& g : gaussians) {
-        // Position
-        file.write(reinterpret_cast<const char*>(&g.x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.z), sizeof(float));
+        // Position (flip: negate Y and Z for 180° rotation around X axis)
+        float posX = g.x;
+        float posY = flipY ? -g.y : g.y;
+        float posZ = flipY ? -g.z : g.z;
+        file.write(reinterpret_cast<const char*>(&posX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posZ), sizeof(float));
         
-        // Normal
-        file.write(reinterpret_cast<const char*>(&g.nx), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.ny), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.nz), sizeof(float));
+        // Normal (flip: negate Y and Z)
+        float normX = g.nx;
+        float normY = flipY ? -g.ny : g.ny;
+        float normZ = flipY ? -g.nz : g.nz;
+        file.write(reinterpret_cast<const char*>(&normX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&normY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&normZ), sizeof(float));
         
         // Color (already in SH0 format from converter)
         file.write(reinterpret_cast<const char*>(&g.r), sizeof(float));
@@ -240,11 +267,23 @@ void PlyIO::writePBR(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
         
-        // Rotation
-        file.write(reinterpret_cast<const char*>(&g.rot_x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_z), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_w), sizeof(float));
+        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
+        float rotX, rotY, rotZ, rotW;
+        if (flipY) {
+            rotX = -g.rot_x;
+            rotY = g.rot_w;
+            rotZ = -g.rot_z;
+            rotW = g.rot_y;
+        } else {
+            rotX = g.rot_x;
+            rotY = g.rot_y;
+            rotZ = g.rot_z;
+            rotW = g.rot_w;
+        }
+        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
     }
     
     file.close();
@@ -252,7 +291,8 @@ void PlyIO::writePBR(const std::string& filename,
 
 void PlyIO::writeCompressed(const std::string& filename,
                             const std::vector<Gaussian>& gaussians,
-                            float scaleMultiplier) {
+                            float scaleMultiplier,
+                            bool flipY) {
     std::ofstream file(filename, std::ios::binary | std::ios::out);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open file for writing: " + filename);
@@ -291,10 +331,13 @@ void PlyIO::writeCompressed(const std::string& filename,
     
     // Write data
     for (const auto& g : gaussians) {
-        // Position
-        file.write(reinterpret_cast<const char*>(&g.x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.z), sizeof(float));
+        // Position (flip: negate Y and Z for 180° rotation around X axis)
+        float posX = g.x;
+        float posY = flipY ? -g.y : g.y;
+        float posZ = flipY ? -g.z : g.z;
+        file.write(reinterpret_cast<const char*>(&posX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&posZ), sizeof(float));
         
         // Color (uint8)
         uint8_t r = floatToByte(g.r);
@@ -306,11 +349,23 @@ void PlyIO::writeCompressed(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&b), sizeof(uint8_t));
         file.write(reinterpret_cast<const char*>(&a), sizeof(uint8_t));
         
-        // Rotation
-        file.write(reinterpret_cast<const char*>(&g.rot_x), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_y), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_z), sizeof(float));
-        file.write(reinterpret_cast<const char*>(&g.rot_w), sizeof(float));
+        // Rotation quaternion (flip: q_flip(0,1,0,0) * q = (-x, w, -z, y))
+        float rotX, rotY, rotZ, rotW;
+        if (flipY) {
+            rotX = -g.rot_x;
+            rotY = g.rot_w;
+            rotZ = -g.rot_z;
+            rotW = g.rot_y;
+        } else {
+            rotX = g.rot_x;
+            rotY = g.rot_y;
+            rotZ = g.rot_z;
+            rotW = g.rot_w;
+        }
+        file.write(reinterpret_cast<const char*>(&rotX), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotY), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotZ), sizeof(float));
+        file.write(reinterpret_cast<const char*>(&rotW), sizeof(float));
         
         // Scale (log space with safe log, using min of x,y for z)
         float sx = safeLog(g.scale_x * scaleMultiplier);
@@ -321,8 +376,11 @@ void PlyIO::writeCompressed(const std::string& filename,
         file.write(reinterpret_cast<const char*>(&sy), sizeof(float));
         file.write(reinterpret_cast<const char*>(&sz), sizeof(float));
         
-        // Normal (octahedral encoding)
-        glm::vec2 octNormal = encodeOctahedral(glm::vec3(g.nx, g.ny, g.nz));
+        // Normal (flip: negate Y and Z, then octahedral encode)
+        float normX = g.nx;
+        float normY = flipY ? -g.ny : g.ny;
+        float normZ = flipY ? -g.nz : g.nz;
+        glm::vec2 octNormal = encodeOctahedral(glm::vec3(normX, normY, normZ));
         uint8_t nx = static_cast<uint8_t>(glm::clamp(std::round(octNormal.x * 255.0f), 0.0f, 255.0f));
         uint8_t ny = static_cast<uint8_t>(glm::clamp(std::round(octNormal.y * 255.0f), 0.0f, 255.0f));
         file.write(reinterpret_cast<const char*>(&nx), sizeof(uint8_t));
