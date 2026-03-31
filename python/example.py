@@ -144,8 +144,10 @@ Examples:
 
     # Save output
     print(f"Saving to: {args.output}")
-    if not mesh2splat.PlyIO.save(args.output, result.gaussians, options.ply_format):
-        print(f"Error: Failed to save PLY file", file=sys.stderr)
+    try:
+        mesh2splat.PlyIO.save(args.output, result.gaussians, options.ply_format)
+    except Exception as e:
+        print(f"Error: Failed to save PLY file: {e}", file=sys.stderr)
         return 1
 
     print("Done!")
