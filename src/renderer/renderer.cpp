@@ -107,6 +107,9 @@ Renderer::~Renderer()
     glDeleteBuffers(1, &(renderContext.valuesBuffer));
     glDeleteBuffers(1, &(renderContext.perQuadTransformationBufferSorted));
     glDeleteBuffers(1, &(renderContext.gaussianDepthPostFiltering));
+    glDeleteBuffers(1, &(renderContext.perQuadTransformationsBuffer));
+    glDeleteBuffers(1, &(renderContext.atomicCounterBuffer));
+    glDeleteBuffers(1, &(renderContext.atomicCounterBufferConversionPass));
 
     deleteMeshGBuffer();
 
@@ -303,9 +306,16 @@ void Renderer::createDepthTexture()
        renderContext.meshDepthTexture,
        0
    );
+
+   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+   {
+       std::cerr << "Depth FBO not complete!" << std::endl;
+   }
    
    glDrawBuffer(GL_NONE);
    glReadBuffer(GL_NONE);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::deleteDepthTexture()

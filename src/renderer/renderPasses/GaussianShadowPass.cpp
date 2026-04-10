@@ -28,6 +28,11 @@ GaussianShadowPass::GaussianShadowPass(RenderContext& renderContext)
     glGenFramebuffers(1, &m_shadowFBO);
 
     glGenBuffers(1, &(renderContext.pointLightData.perQuadTransformationsUnified));
+    // Pre-allocate the transformation buffer (avoids ~2GB per-frame allocation)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderContext.pointLightData.perQuadTransformationsUnified);
+    size_t transformationBufferSize = MAX_GAUSSIANS_TO_SORT * sizeof(glm::vec4) * 3 * 6;
+    glBufferData(GL_SHADER_STORAGE_BUFFER, transformationBufferSize, nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     for (int face = 0; face < 6; face++) {
         glGenBuffers(1, &renderContext.pointLightData.atomicCounterBufferPerFace[face]);
@@ -131,9 +136,7 @@ void GaussianShadowPass::execute(RenderContext& renderContext)
            
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, renderContext.gaussianBuffer);
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderContext.pointLightData.perQuadTransformationsUnified);
-    size_t transformationBufferSize = MAX_GAUSSIANS_TO_SORT * sizeof(glm::vec4) * 3 * 6;
-    glBufferData(GL_SHADER_STORAGE_BUFFER, transformationBufferSize, nullptr, GL_DYNAMIC_DRAW);
+    // Buffer is pre-allocated in constructor to avoid per-frame allocation
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, renderContext.pointLightData.perQuadTransformationsUnified);
     
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_indirectDrawBuffer);

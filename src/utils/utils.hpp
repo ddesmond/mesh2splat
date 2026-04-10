@@ -4,9 +4,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+
+// Windows-only memory debugging
+#ifdef _WIN32
 #define _CRTDBG_MAP_ALLOC  
 #include <stdlib.h>  
-#include <crtdbg.h>  
+#include <crtdbg.h>
+#else
+#include <cstdlib>
+#endif  
 
 #include <string>
 #include <vector>
@@ -27,8 +33,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#include <experimental/filesystem>
+// Use C++17 filesystem instead of deprecated experimental
 #define EMPTY_TEXTURE "empty_texture"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -38,6 +43,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+#ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -46,9 +52,10 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#endif
 
 
-static void CheckOpenGLError(const char* stmt, const char* fname, int line)
+inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
 {
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
@@ -67,7 +74,7 @@ static void CheckOpenGLError(const char* stmt, const char* fname, int line)
     #define GL_CHECK(stmt) stmt
 #endif
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 namespace utils
 {
@@ -111,13 +118,13 @@ namespace utils
         MaterialGltf() : name("Default"), baseColorFactor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)),
             baseColorTexture(TextureInfo()), normalTexture(TextureInfo()), metallicRoughnessTexture(TextureInfo()),
             occlusionTexture(TextureInfo()), emissiveTexture(TextureInfo()),
-            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(1.0f, 1.0f, 1.0f)) {}
+            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(0.0f, 0.0f, 0.0f)) {}
 
         MaterialGltf(const std::string& name, const glm::vec4& baseColorFactor) :
             name(name), baseColorFactor(baseColorFactor),
             baseColorTexture(TextureInfo()), normalTexture(TextureInfo()), metallicRoughnessTexture(TextureInfo()),
             occlusionTexture(TextureInfo()), emissiveTexture(TextureInfo()),
-            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(1.0f, 1.0f, 1.0f)) {}
+            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(0.0f, 0.0f, 0.0f)) {}
 
         MaterialGltf(const std::string& name, const glm::vec4& baseColorFactor, const TextureInfo& baseColorTexture,
             const TextureInfo& normalTexture, const TextureInfo& metallicRoughnessTexture, const TextureInfo& occlusionTexture,
@@ -132,7 +139,7 @@ namespace utils
     struct Gaussian3D {
         Gaussian3D(glm::vec3 position, glm::vec3 normal, glm::vec3 scale, glm::vec4 rotation, glm::vec3 RGB, float opacity, MaterialGltf material)
             : position(position), normal(normal), scale(scale), rotation(rotation), sh0(RGB), opacity(opacity), material(material) {};
-        Gaussian3D() : position(NULL), normal(NULL), scale(NULL), rotation(NULL), sh0(NULL), opacity(NULL), material(MaterialGltf()) {};
+        Gaussian3D() : position(0.0f), normal(0.0f), scale(0.0f), rotation(0.0f), sh0(0.0f), opacity(0.0f), material(MaterialGltf()) {};
         glm::vec3 position;
         glm::vec3 normal;
         glm::vec3 scale;
@@ -282,9 +289,9 @@ namespace utils
 
     std::string modelFileExtensionEnumToString(ModelFileExtension ext);
 
-    static std::string pad3(int i) { char b[8]; std::snprintf(b, sizeof(b), "%03d", i); return b; }
+    inline std::string pad3(int i) { char b[8]; std::snprintf(b, sizeof(b), "%03d", i); return b; }
 
-    static std::string makeUniquePath(const std::filesystem::path& p) {
+    inline std::string makeUniquePath(const std::filesystem::path& p) {
         namespace fs = std::filesystem;
         fs::path candidate = p;
         int n = 1;
