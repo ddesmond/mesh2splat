@@ -5,7 +5,9 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 
+#include "Converter.hpp"
 #include "core/Types.hpp"
 #include "core/GltfLoader.hpp"
 #include "core/PlyIO.hpp"
@@ -14,19 +16,76 @@ namespace py = pybind11;
 
 namespace mesh2splat {
 
-std::string getVersion() {
-    return "0.1.0";
-}
-
-std::string getBuildInfo() {
-    std::string info = "mesh2splat ";
-    info += getVersion();
-#ifdef MESH2SPLAT_ENABLE_GPU
-    info += " [GPU enabled]";
-#else
-    info += " [CPU only]";
-#endif
-    return info;
+/// Convert gaussians to numpy arrays for efficient Python access
+py::dict gaussiansToNumpy(const std::vector<Gaussian>& gaussians) {
+    size_t n = gaussians.size();
+    
+    // Create numpy arrays for each attribute
+    auto positions = py::array_t<float>({n, size_t(3)});
+    auto colors = py::array_t<float>({n, size_t(3)});
+    auto opacities = py::array_t<float>(n);
+    auto scales = py::array_t<float>({n, size_t(3)});
+    auto rotations = py::array_t<float>({n, size_t(4)});
+    auto normals = py::array_t<float>({n, size_t(3)});
+    auto metallic = py::array_t<float>(n);
+    auto roughness = py::array_t<float>(n);
+    auto ao = py::array_t<float>(n);
+    
+    // Get mutable pointers
+    auto pos_ptr = positions.mutable_unchecked<2>();
+    auto col_ptr = colors.mutable_unchecked<2>();
+    auto opa_ptr = opacities.mutable_unchecked<1>();
+    auto sca_ptr = scales.mutable_unchecked<2>();
+    auto rot_ptr = rotations.mutable_unchecked<2>();
+    auto nor_ptr = normals.mutable_unchecked<2>();
+    auto met_ptr = metallic.mutable_unchecked<1>();
+    auto rou_ptr = roughness.mutable_unchecked<1>();
+    auto ao_ptr = ao.mutable_unchecked<1>();
+    
+    // Copy data
+    for (size_t i = 0; i < n; i++) {
+        const auto& g = gaussians[i];
+        
+        pos_ptr(i, 0) = g.x;
+        pos_ptr(i, 1) = g.y;
+        pos_ptr(i, 2) = g.z;
+        
+        col_ptr(i, 0) = g.r;
+        col_ptr(i, 1) = g.g;
+        col_ptr(i, 2) = g.b;
+        
+        opa_ptr(i) = g.opacity;
+        
+        sca_ptr(i, 0) = g.scale_x;
+        sca_ptr(i, 1) = g.scale_y;
+        sca_ptr(i, 2) = g.scale_z;
+        
+        rot_ptr(i, 0) = g.rot_w;
+        rot_ptr(i, 1) = g.rot_x;
+        rot_ptr(i, 2) = g.rot_y;
+        rot_ptr(i, 3) = g.rot_z;
+        
+        nor_ptr(i, 0) = g.nx;
+        nor_ptr(i, 1) = g.ny;
+        nor_ptr(i, 2) = g.nz;
+        
+        met_ptr(i) = g.metallic;
+        rou_ptr(i) = g.roughness;
+        ao_ptr(i) = g.ao;
+    }
+    
+    py::dict result;
+    result["positions"] = positions;
+    result["colors"] = colors;
+    result["opacities"] = opacities;
+    result["scales"] = scales;
+    result["rotations"] = rotations;
+    result["normals"] = normals;
+    result["metallic"] = metallic;
+    result["roughness"] = roughness;
+    result["ao"] = ao;
+    
+    return result;
 }
 
 PYBIND11_MODULE(_mesh2splat, m) {
@@ -238,13 +297,57 @@ PYBIND11_MODULE(_mesh2splat, m) {
             "Load gaussians from PLY file");
     
     //--------------------------------------------------------------------------
+    // Converter
+    //--------------------------------------------------------------------------
+    
+    py::class_<Converter>(m, "Converter", "Main mesh to Gaussian splat converter")
+        .def(py::init<Backend>(), py::arg("backend") = Backend::Auto,
+            "Create a converter with specified backend")
+        .def("convert_file", &Converter::convertFile,
+            py::arg("path"), py::arg("options") = ConversionOptions(),
+            py::call_guard<py::gil_scoped_release>(),
+            "Load and convert a GLTF/GLB file to gaussians")
+        .def("convert", [](Converter& c, const Scene& scene, const ConversionOptions& options) {
+            return c.convert(scene, options);
+        }, py::arg("scene"), py::arg("options") = ConversionOptions(),
+            py::call_guard<py::gil_scoped_release>(),
+            "Convert a loaded scene to gaussians")
+        .def("is_ready", &Converter::isReady, "Check if converter is ready")
+        .def("get_active_backend", &Converter::getActiveBackend, "Get the active backend")
+        .def("get_error_message", &Converter::getErrorMessage, "Get error message if not ready")
+        .def_static("get_available_backends", &Converter::getAvailableBackends,
+            "Get list of available backends on this system")
+        .def_static("is_backend_available", &Converter::isBackendAvailable,
+            py::arg("backend"), "Check if a specific backend is available")
+        .def("__repr__", [](const Converter& c) {
+            std::string backend_str;
+            switch (c.getActiveBackend()) {
+                case Backend::CPU: backend_str = "CPU"; break;
+                case Backend::GPU: backend_str = "GPU"; break;
+                default: backend_str = "Auto"; break;
+            }
+            return "<Converter backend=" + backend_str + " ready=" + 
+                   (c.isReady() ? "True" : "False") + ">";
+        });
+    
+    //--------------------------------------------------------------------------
     // Module-level functions
     //--------------------------------------------------------------------------
     
+    m.def("convert", [](const std::string& input_path, 
+                        const std::string& output_path,
+                        const ConversionOptions& options) {
+        return convertMeshToSplat(input_path, output_path, options);
+    }, py::arg("input_path"), py::arg("output_path"), 
+       py::arg("options") = ConversionOptions(),
+       py::call_guard<py::gil_scoped_release>(),
+       "Convert a mesh file to PLY splat file (convenience function)");
+    
     m.def("get_version", &getVersion, "Get library version");
     m.def("get_build_info", &getBuildInfo, "Get build information");
-    m.def("get_backend_name", &getBackendName, "Get backend name as string");
-    m.def("get_available_backends", &getAvailableBackends, "Get list of available backends");
+    
+    m.def("gaussians_to_numpy", &gaussiansToNumpy, py::arg("gaussians"),
+        "Convert a list of Gaussian objects to numpy arrays");
 }
 
 } // namespace mesh2splat

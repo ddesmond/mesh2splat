@@ -1,15 +1,33 @@
 """
-Mesh2Splat: Fast mesh to 3D Gaussian splat conversion
+mesh2splat - Python bindings for Mesh2Splat
 
-This module provides Python bindings for converting 3D meshes (GLTF/GLB)
-to 3D Gaussian splat format (PLY).
+Convert 3D meshes to Gaussian splats for 3D Gaussian Splatting.
+
+Example usage:
+    import mesh2splat
+
+    # Simple conversion
+    mesh2splat.convert("model.gltf", "output.ply")
+
+    # With options
+    options = mesh2splat.ConversionOptions()
+    options.resolution = 1024
+    options.backend = mesh2splat.Backend.CPU
+
+    converter = mesh2splat.Converter()
+    result = converter.convert_file("model.gltf", options)
+
+    if result.success:
+        print(f"Generated {result.total_gaussians} gaussians")
+        mesh2splat.PlyIO.save("output.ply", result.gaussians)
+
+        # Access as numpy arrays
+        arrays = mesh2splat.gaussians_to_numpy(result.gaussians)
+        positions = arrays["positions"]  # (N, 3) float32
+        colors = arrays["colors"]        # (N, 3) float32
 """
 
 from ._mesh2splat import (
-    get_version,
-    get_build_info,
-    get_backend_name,
-    get_available_backends,
     # Enums
     Backend,
     PlyFormat,
@@ -18,37 +36,49 @@ from ._mesh2splat import (
     OpacityMode,
     # Core types
     Gaussian,
-    ConversionOptions,
     ConversionResult,
+    ConversionOptions,
     BBox,
     Material,
     Face,
     Mesh,
     Scene,
-    # Loaders / I/O
-    GltfLoader,
+    # Main classes
+    Converter,
     PlyIO,
+    GltfLoader,
+    # Module functions
+    convert,
+    get_version,
+    get_build_info,
+    gaussians_to_numpy,
 )
 
 __version__ = get_version()
+
 __all__ = [
-    "get_version",
-    "get_build_info",
-    "get_backend_name",
-    "get_available_backends",
+    # Enums
     "Backend",
     "PlyFormat",
     "RasterizationMode",
     "DcMode",
     "OpacityMode",
+    # Core types
     "Gaussian",
-    "ConversionOptions",
     "ConversionResult",
+    "ConversionOptions",
     "BBox",
     "Material",
     "Face",
     "Mesh",
     "Scene",
-    "GltfLoader",
+    # Main classes
+    "Converter",
     "PlyIO",
+    "GltfLoader",
+    # Functions
+    "convert",
+    "get_version",
+    "get_build_info",
+    "gaussians_to_numpy",
 ]
