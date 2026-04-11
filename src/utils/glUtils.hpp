@@ -91,7 +91,6 @@ namespace glUtils
         GLsizeiptr bufferSize = size * sizeof(T);
         glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, GL_STREAM_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPos, buffer);
-        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     };
 

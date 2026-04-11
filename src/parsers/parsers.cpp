@@ -346,6 +346,7 @@ namespace parsers
 
             //---------NEW-----------------------------------------------------
             //Material properties
+
             file.write(reinterpret_cast<const char*>(&gaussian.pbr.x), sizeof(gaussian.pbr.x));
             file.write(reinterpret_cast<const char*>(&gaussian.pbr.y), sizeof(gaussian.pbr.y));
             //-----------------------------------------------------------------
@@ -695,7 +696,6 @@ namespace parsers
                 gaussian.normal.y = vertex_ny[i];
                 gaussian.normal.z = vertex_nz[i];
                 gaussian.normal.w = 0.0f;
-
                 glm::quat rot = glm::quat(vertex_rot_0[i], vertex_rot_1[i], vertex_rot_2[i], vertex_rot_3[i]);
                 rot = glm::normalize(rot);
                 gaussian.rotation.x = rot.w;
