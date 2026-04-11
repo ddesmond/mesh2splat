@@ -8,6 +8,7 @@
 
 #include "core/Types.hpp"
 #include "core/GltfLoader.hpp"
+#include "core/PlyIO.hpp"
 
 namespace py = pybind11;
 
@@ -217,6 +218,24 @@ PYBIND11_MODULE(_mesh2splat, m) {
         .def("load", &GltfLoader::load, py::arg("path"),
             py::call_guard<py::gil_scoped_release>(),
             "Load a GLTF or GLB file and return a Scene");
+    
+    //--------------------------------------------------------------------------
+    // PlyIO
+    //--------------------------------------------------------------------------
+    
+    py::class_<PlyIO>(m, "PlyIO", "PLY file I/O for Gaussian splats")
+        .def_static("save", &PlyIO::save,
+            py::arg("filename"),
+            py::arg("gaussians"),
+            py::arg("format") = PlyFormat::Standard,
+            py::arg("scale_multiplier") = 1.0f,
+            py::arg("flip_y") = true,
+            py::call_guard<py::gil_scoped_release>(),
+            "Save gaussians to PLY file")
+        .def_static("load", &PlyIO::load,
+            py::arg("filename"),
+            py::call_guard<py::gil_scoped_release>(),
+            "Load gaussians from PLY file");
     
     //--------------------------------------------------------------------------
     // Module-level functions

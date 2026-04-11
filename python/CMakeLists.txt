@@ -11,6 +11,7 @@ set(MESH2SPLAT_PY_SOURCES
     src/mesh2splat/core/Types.cpp
     src/mesh2splat/core/TextureSampler.cpp
     src/mesh2splat/core/GltfLoader.cpp
+    src/mesh2splat/core/PlyIO.cpp
     src/mesh2splat/Bindings.cpp
 )
 
