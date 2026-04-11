@@ -33,7 +33,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-// Use C++17 filesystem instead of deprecated experimental
+// Note: std::experimental::filesystem was previously used here but has been removed.
+// All filesystem operations now use <filesystem> (already included above).
 #define EMPTY_TEXTURE "empty_texture"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -97,8 +98,17 @@ namespace utils
         std::vector<unsigned char> texture;
         int width, height;
         unsigned int channels;
+        int textureIndex = -1;
+        int imageIndex = -1;
+        int samplerIndex = -1;
+        int wrapS = 0;
+        int wrapT = 0;
+        int minFilter = 0;
+        int magFilter = 0;
+        std::string mimeType;
 
-        TextureInfo(const std::string& path = EMPTY_TEXTURE, int texCoordIndex = 0, std::vector<unsigned char> texture = {}, int width = 0, int height = 0, unsigned int channels = 0) : path(path), texCoordIndex(texCoordIndex), texture(texture), width(width), height(height), channels(channels) {}
+        TextureInfo(const std::string& path = EMPTY_TEXTURE, int texCoordIndex = 0, std::vector<unsigned char> texture = {}, int width = 0, int height = 0, unsigned int channels = 0)
+            : path(path), texCoordIndex(texCoordIndex), texture(texture), width(width), height(height), channels(channels) {}
     };
 
     struct MaterialGltf {
@@ -118,13 +128,13 @@ namespace utils
         MaterialGltf() : name("Default"), baseColorFactor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)),
             baseColorTexture(TextureInfo()), normalTexture(TextureInfo()), metallicRoughnessTexture(TextureInfo()),
             occlusionTexture(TextureInfo()), emissiveTexture(TextureInfo()),
-            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(0.0f, 0.0f, 0.0f)) {}
+            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(1.0f, 1.0f, 1.0f)) {}
 
         MaterialGltf(const std::string& name, const glm::vec4& baseColorFactor) :
             name(name), baseColorFactor(baseColorFactor),
             baseColorTexture(TextureInfo()), normalTexture(TextureInfo()), metallicRoughnessTexture(TextureInfo()),
             occlusionTexture(TextureInfo()), emissiveTexture(TextureInfo()),
-            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(0.0f, 0.0f, 0.0f)) {}
+            metallicFactor(1.0f), roughnessFactor(1.0f), occlusionStrength(1.0f), normalScale(1.0f), emissiveFactor(glm::vec3(1.0f, 1.0f, 1.0f)) {}
 
         MaterialGltf(const std::string& name, const glm::vec4& baseColorFactor, const TextureInfo& baseColorTexture,
             const TextureInfo& normalTexture, const TextureInfo& metallicRoughnessTexture, const TextureInfo& occlusionTexture,
@@ -152,7 +162,7 @@ namespace utils
     struct GaussianDataSSBO {
         glm::vec4 position;
         glm::vec4 color;
-        glm::vec4 scale;
+        glm::vec4 linearScale;  // Renamed from 'scale' for clarity (linear-space scale)
         glm::vec4 normal;
         glm::vec4 rotation;
         glm::vec4 pbr;
@@ -180,6 +190,23 @@ namespace utils
 
     struct Mesh {
         std::string name;
+        std::string sourceName;
+        int primitiveIndex = -1;
+        int materialIndex = -1;
+        struct UVAccessorInfo {
+            bool hasTexcoord = false;
+            int accessorIndex = -1;
+            int accessorType = 0;
+            int componentType = 0;
+            bool normalized = false;
+            size_t count = 0;
+            size_t accessorByteOffset = 0;
+            int bufferViewIndex = -1;
+            size_t bufferViewByteOffset = 0;
+            size_t bufferViewByteStride = 0;
+            int bufferIndex = -1;
+            size_t bufferByteLength = 0;
+        } uvAccessor;
         std::vector<Face> faces; // Tuple of vertex indices, uv indices and normalIndices
         MaterialGltf material; 
         float surfaceArea = 0;
@@ -200,6 +227,11 @@ namespace utils
         unsigned int glTextureID    = 0;
         unsigned int width          = 0;
         unsigned int height         = 0;
+        int wrapS = 0;
+        int wrapT = 0;
+        int minFilter = 0;
+        int magFilter = 0;
+        bool srgb = false;
 
         TextureDataGl(std::vector<unsigned char> textureData, unsigned int channels, unsigned int glTextureID, unsigned int width, unsigned int height) : textureData(textureData), channels(channels), glTextureID(glTextureID), width(width), height(height){}
         
@@ -212,6 +244,10 @@ namespace utils
             glTextureID = 0;
             width = info.width;
             height = info.height;
+            wrapS = info.wrapS;
+            wrapT = info.wrapT;
+            minFilter = info.minFilter;
+            magFilter = info.magFilter;
         }
 
 
@@ -222,6 +258,7 @@ namespace utils
         NONE,
         PLY,
         GLB,
+        GLTF,
     };
 
 
