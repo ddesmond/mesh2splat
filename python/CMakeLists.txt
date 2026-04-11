@@ -8,6 +8,8 @@ find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 
 # Source files for the binding library
 set(MESH2SPLAT_PY_SOURCES
+    src/mesh2splat/core/Types.cpp
+    src/mesh2splat/core/TextureSampler.cpp
     src/mesh2splat/Bindings.cpp
 )
 
