@@ -78,6 +78,13 @@ Renderer::Renderer(GLFWwindow* window, Camera& cameraInstance) : camera(cameraIn
     glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zeroVal);
     glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
+    // Debug counters SSBO for conversion pass
+    glGenBuffers(1, &renderContext.conversionDebugCounters);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderContext.conversionDebugCounters);
+    uint32_t zeros[5] = {0, 0, 0, 0, 0};
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zeros), zeros, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
     //Indirect buff
     glGenBuffers(1, &(renderContext.drawIndirectBuffer));
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, renderContext.drawIndirectBuffer);
@@ -110,6 +117,7 @@ Renderer::~Renderer()
     glDeleteBuffers(1, &(renderContext.perQuadTransformationsBuffer));
     glDeleteBuffers(1, &(renderContext.atomicCounterBuffer));
     glDeleteBuffers(1, &(renderContext.atomicCounterBufferConversionPass));
+    glDeleteBuffers(1, &(renderContext.conversionDebugCounters));
 
     deleteMeshGBuffer();
 
@@ -252,6 +260,11 @@ void Renderer::setViewportResolutionForConversion(int resolutionTarget)
     renderContext.resolutionTarget = resolutionTarget;
 }
 
+void Renderer::setProjectionMode(bool useOrthogonal)
+{
+    renderContext.useOrthogonalProjection = useOrthogonal;
+}
+
             
 void Renderer::setFormatType(unsigned int format)
 {
@@ -313,9 +326,16 @@ void Renderer::createDepthTexture()
        renderContext.meshDepthTexture,
        0
    );
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Depth FBO not complete!" << std::endl;
+    }
    
    glDrawBuffer(GL_NONE);
    glReadBuffer(GL_NONE);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::deleteDepthTexture()
@@ -405,11 +425,12 @@ void Renderer::deleteGBuffer()
     glDeleteTextures(1, &renderContext.gDepth);
     glDeleteTextures(1, &renderContext.gMetallicRoughness);
 
-    renderContext.gBufferFBO    = 0;
-    renderContext.gPosition     = 0;
-    renderContext.gNormal       = 0;
-    renderContext.gAlbedo       = 0;
-    renderContext.gDepth        = 0;
+    renderContext.gBufferFBO           = 0;
+    renderContext.gPosition            = 0;
+    renderContext.gNormal              = 0;
+    renderContext.gAlbedo              = 0;
+    renderContext.gDepth               = 0;
+    renderContext.gMetallicRoughness   = 0;
 }
 
 	

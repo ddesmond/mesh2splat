@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "guiRendererConcreteMediator.hpp"
+#include <iostream>
 
 void GuiRendererConcreteMediator::notify(EventType event)
 {
@@ -50,6 +51,7 @@ void GuiRendererConcreteMediator::notify(EventType event)
         }
         case EventType::RunConversion: {
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
+            renderer.setProjectionMode(imguiUI.getProjectionMode() != 0); // 0=UV, 1=Orthogonal
             renderer.enableRenderPass(conversionPassName);
             imguiUI.setRunConversion(false);
             
@@ -109,8 +111,18 @@ void GuiRendererConcreteMediator::notify(EventType event)
             break;
         }
         case EventType::SavePLY: {
-            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption());
+            imguiUI.ensureOutputDirectoryExists();
+            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption(), imguiUI.getFlipYOnExport());
             imguiUI.setShouldSavePly(false);
+            break;
+        }
+        case EventType::SaveAllFormats: {
+            // Save current format (0=Standard, 1=PBR, 2=Compressed PBR)
+            imguiUI.ensureOutputDirectoryExists();
+            int formatIdx = imguiUI.getSaveAllFormatsIndex();
+            std::string path = imguiUI.getMeshFullFilePathDestinationWithSuffix(formatIdx);
+            renderer.getSceneManager().exportPly(path, formatIdx, imguiUI.getFlipYOnExport());
+            imguiUI.advanceSaveAllFormats();
             break;
         }
         case EventType::ResizedWindow: {
@@ -219,6 +231,10 @@ void GuiRendererConcreteMediator::update()
 
         if (imguiUI.shouldSavePly()) {
             notify(EventType::SavePLY);
+        }
+
+        if (imguiUI.shouldSaveAllFormats()) {
+            notify(EventType::SaveAllFormats);
         }
 
         notify(EventType::UpdateTransforms);

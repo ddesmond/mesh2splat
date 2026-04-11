@@ -64,7 +64,6 @@ struct RenderContext {
     int normalizedUvSpaceHeight;
     unsigned int resolutionTarget; 
     unsigned int format; //0: from mesh2splat, 1: classic .ply 3dgs, 2: compressedPBR
-    bool plyHasPbr = false; // if format == 1 (loaded ply file), does ply support pbr rendering
 
     // Conversion options (from ECA merge)
     uint32_t maxSplats = 4000000;

@@ -4,7 +4,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-#include <cstdint>
 #include "tiny_gltf.h"
 #include "stb_image.h"   
 #include "stb_image_resize.h"
@@ -30,13 +29,15 @@ namespace parsers
 
 	utils::TextureDataGl loadImageAndBpp(std::string texturePath, int& textureWidth, int& textureHeight);
 
-	void writePbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier);
+	void writePbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, DcMode dcMode = DcMode::Current, OpacityMode opacityMode = OpacityMode::Current, bool flipY = false);
 
-	void writeBinaryPlyStandardFormat(const std::string& filename, const std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier);
+	void writeBinaryPlyStandardFormat(const std::string& filename, const std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, DcMode dcMode = DcMode::Current, OpacityMode opacityMode = OpacityMode::Current, bool flipY = false);
 
-	void loadPlyFile(std::string plyFileLocation, std::vector<utils::GaussianDataSSBO>& gaussians, bool& hasPbr);
+	void loadPlyFile(std::string plyFileLocation, std::vector<utils::GaussianDataSSBO>& gaussians);
 
-	void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO> gaussians_3D_list, unsigned int format, float scaleMultiplier);
+	void savePlyVector(std::string outputFileLocation, std::vector<utils::GaussianDataSSBO>&& gaussians_3D_list, unsigned int format, float scaleMultiplier, DcMode dcMode = DcMode::Current, OpacityMode opacityMode = OpacityMode::Current, bool flipY = false);
+	
+	void writeCompressedPbrPLY(const std::string& filename, std::vector<utils::GaussianDataSSBO>& gaussians, float scaleMultiplier, bool flipY = false);
 
 	unsigned char* combineMetallicRoughness(const char* path1, const char* path2, int& width, int& height, int& channels);
 
