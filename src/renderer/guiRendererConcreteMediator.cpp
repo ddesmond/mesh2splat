@@ -10,13 +10,8 @@ void GuiRendererConcreteMediator::notify(EventType event)
 {
     switch (event) {
         case EventType::LoadModel: {
-            std::cerr << "[DEBUG] LoadModel event triggered" << std::endl;
-            std::cerr << "[DEBUG] Mesh path: " << imguiUI.getMeshFilePath() << std::endl;
-            std::cerr << "[DEBUG] Parent folder: " << imguiUI.getMeshFilePathParentFolder() << std::endl;
             renderer.resetModelMatrices();
-            std::cerr << "[DEBUG] Calling loadModel..." << std::endl;
             renderer.getSceneManager().loadModel(imguiUI.getMeshFilePath(), imguiUI.getMeshFilePathParentFolder());
-            std::cerr << "[DEBUG] loadModel completed" << std::endl;
             renderer.gaussianBufferFromSize(imguiUI.getResolutionTarget() * imguiUI.getResolutionTarget());
             renderer.setFormatType(0); //TODO: use an enum
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
@@ -116,16 +111,17 @@ void GuiRendererConcreteMediator::notify(EventType event)
             break;
         }
         case EventType::SavePLY: {
+            imguiUI.ensureOutputDirectoryExists();
             renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption(), imguiUI.getFlipYOnExport());
             imguiUI.setShouldSavePly(false);
             break;
         }
         case EventType::SaveAllFormats: {
             // Save current format (0=Standard, 1=PBR, 2=Compressed PBR)
+            imguiUI.ensureOutputDirectoryExists();
             int formatIdx = imguiUI.getSaveAllFormatsIndex();
             std::string path = imguiUI.getMeshFullFilePathDestinationWithSuffix(formatIdx);
             renderer.getSceneManager().exportPly(path, formatIdx, imguiUI.getFlipYOnExport());
-            std::cerr << "[SaveAllFormats] Saved format " << formatIdx << " to: " << path << std::endl;
             imguiUI.advanceSaveAllFormats();
             break;
         }

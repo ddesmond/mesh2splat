@@ -20,7 +20,7 @@ namespace mesh2splat {
 py::dict gaussiansToNumpy(const std::vector<Gaussian>& gaussians) {
     size_t n = gaussians.size();
     
-    // Create numpy arrays for each attribute
+    // Create numpy arrays for each attribute (requires GIL)
     auto positions = py::array_t<float>({n, size_t(3)});
     auto colors = py::array_t<float>({n, size_t(3)});
     auto opacities = py::array_t<float>(n);
@@ -31,48 +31,53 @@ py::dict gaussiansToNumpy(const std::vector<Gaussian>& gaussians) {
     auto roughness = py::array_t<float>(n);
     auto ao = py::array_t<float>(n);
     
-    // Get mutable pointers
-    auto pos_ptr = positions.mutable_unchecked<2>();
-    auto col_ptr = colors.mutable_unchecked<2>();
-    auto opa_ptr = opacities.mutable_unchecked<1>();
-    auto sca_ptr = scales.mutable_unchecked<2>();
-    auto rot_ptr = rotations.mutable_unchecked<2>();
-    auto nor_ptr = normals.mutable_unchecked<2>();
-    auto met_ptr = metallic.mutable_unchecked<1>();
-    auto rou_ptr = roughness.mutable_unchecked<1>();
-    auto ao_ptr = ao.mutable_unchecked<1>();
+    // Get raw pointers for GIL-free copy
+    float* pos_data = positions.mutable_data();
+    float* col_data = colors.mutable_data();
+    float* opa_data = opacities.mutable_data();
+    float* sca_data = scales.mutable_data();
+    float* rot_data = rotations.mutable_data();
+    float* nor_data = normals.mutable_data();
+    float* met_data = metallic.mutable_data();
+    float* rou_data = roughness.mutable_data();
+    float* ao_data = ao.mutable_data();
     
-    // Copy data
-    for (size_t i = 0; i < n; i++) {
-        const auto& g = gaussians[i];
+    // Release GIL during data copy for large datasets
+    {
+        py::gil_scoped_release release;
         
-        pos_ptr(i, 0) = g.x;
-        pos_ptr(i, 1) = g.y;
-        pos_ptr(i, 2) = g.z;
-        
-        col_ptr(i, 0) = g.r;
-        col_ptr(i, 1) = g.g;
-        col_ptr(i, 2) = g.b;
-        
-        opa_ptr(i) = g.opacity;
-        
-        sca_ptr(i, 0) = g.scale_x;
-        sca_ptr(i, 1) = g.scale_y;
-        sca_ptr(i, 2) = g.scale_z;
-        
-        rot_ptr(i, 0) = g.rot_w;
-        rot_ptr(i, 1) = g.rot_x;
-        rot_ptr(i, 2) = g.rot_y;
-        rot_ptr(i, 3) = g.rot_z;
-        
-        nor_ptr(i, 0) = g.nx;
-        nor_ptr(i, 1) = g.ny;
-        nor_ptr(i, 2) = g.nz;
-        
-        met_ptr(i) = g.metallic;
-        rou_ptr(i) = g.roughness;
-        ao_ptr(i) = g.ao;
+        for (size_t i = 0; i < n; i++) {
+            const auto& g = gaussians[i];
+            
+            pos_data[i * 3 + 0] = g.x;
+            pos_data[i * 3 + 1] = g.y;
+            pos_data[i * 3 + 2] = g.z;
+            
+            col_data[i * 3 + 0] = g.r;
+            col_data[i * 3 + 1] = g.g;
+            col_data[i * 3 + 2] = g.b;
+            
+            opa_data[i] = g.opacity;
+            
+            sca_data[i * 3 + 0] = g.scale_x;
+            sca_data[i * 3 + 1] = g.scale_y;
+            sca_data[i * 3 + 2] = g.scale_z;
+            
+            rot_data[i * 4 + 0] = g.rot_w;
+            rot_data[i * 4 + 1] = g.rot_x;
+            rot_data[i * 4 + 2] = g.rot_y;
+            rot_data[i * 4 + 3] = g.rot_z;
+            
+            nor_data[i * 3 + 0] = g.nx;
+            nor_data[i * 3 + 1] = g.ny;
+            nor_data[i * 3 + 2] = g.nz;
+            
+            met_data[i] = g.metallic;
+            rou_data[i] = g.roughness;
+            ao_data[i] = g.ao;
+        }
     }
+    // GIL re-acquired here
     
     py::dict result;
     result["positions"] = positions;

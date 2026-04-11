@@ -534,28 +534,14 @@ bool ImGuiUI::shouldSavePly() const { return savePly; } ;
 std::string ImGuiUI::getMeshFilePath() const { return meshFilePath; };
 std::string ImGuiUI::getMeshFilePathParentFolder() const {return meshParentFolder;};
 std::string ImGuiUI::getMeshFullFilePathDestination() const {
-    // Ensure destination directory exists (create /ply folder if needed)
-    if (!destinationFilePathFolder.empty()) {
-        std::filesystem::create_directories(destinationFilePathFolder);
-    }
-    
     if (utils::getFileExtension(std::string(outputFilename)) == utils::ModelFileExtension::NONE)
     {
         return destinationFilePathFolder + "/" + std::string(outputFilename) + ".ply";
-    }
-    else if (utils::getFileExtension(std::string(outputFilename)) == utils::ModelFileExtension::PLY)
-    {
-        return destinationFilePathFolder + "/" + std::string(outputFilename);
     }
     return destinationFilePathFolder + "/" + std::string(outputFilename);
 };
 
 std::string ImGuiUI::getMeshFullFilePathDestinationWithSuffix(int formatIdx) const {
-    // Ensure destination directory exists (create /ply folder if needed)
-    if (!destinationFilePathFolder.empty()) {
-        std::filesystem::create_directories(destinationFilePathFolder);
-    }
-    
     // Get base filename without extension
     std::filesystem::path p(outputFilename);
     std::string stem = p.stem().string();
@@ -569,6 +555,12 @@ std::string ImGuiUI::getMeshFullFilePathDestinationWithSuffix(int formatIdx) con
 
 std::string ImGuiUI::getPlyFilePath() const { return std::string(plyFilePath); };
 std::string ImGuiUI::getPlyFilePathParentFolder() const { return plyParentFolder; };
+
+void ImGuiUI::ensureOutputDirectoryExists() const {
+    if (!destinationFilePathFolder.empty()) {
+        std::filesystem::create_directories(destinationFilePathFolder);
+    }
+}
 
 unsigned int ImGuiUI::getFormatOption() const { return formatOptions[formatIndex]; };
 bool ImGuiUI::getFlipYOnExport() const { return flipYOnExport; };

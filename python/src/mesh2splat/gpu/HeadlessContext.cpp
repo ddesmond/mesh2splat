@@ -277,12 +277,21 @@ public:
     
     std::string getGLVersion() const {
         if (!isValid()) return "N/A";
+        // Context must be current to call glGetString
+        // Note: This temporarily makes context current; caller may need to restore
+        if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+            return "Unknown (context switch failed)";
+        }
         const char* version = (const char*)glGetString(GL_VERSION);
         return version ? version : "Unknown";
     }
     
     std::string getGLRenderer() const {
         if (!isValid()) return "N/A";
+        // Context must be current to call glGetString
+        if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+            return "Unknown (context switch failed)";
+        }
         const char* renderer = (const char*)glGetString(GL_RENDERER);
         return renderer ? renderer : "Unknown";
     }

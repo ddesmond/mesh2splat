@@ -172,6 +172,7 @@ bool GltfLoader::isGltfFile(const std::string& filePath) {
 
 Scene GltfLoader::load(const std::string& filePath) {
     messages_.clear();
+    errorMessage_.clear();
     Scene scene;
     scene.sourcePath = filePath;
     
@@ -196,7 +197,8 @@ Scene GltfLoader::load(const std::string& filePath) {
     }
     
     if (!ret) {
-        throw std::runtime_error("Failed to load GLTF: " + err);
+        errorMessage_ = "Failed to load GLTF: " + err;
+        throw std::runtime_error(errorMessage_);
     }
     
     // Mesh instance with transform

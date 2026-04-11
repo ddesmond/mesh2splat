@@ -5,7 +5,7 @@
 #include "GaussianSplat.h"
 #include <cmath>
 
-//https://gitlab.ea.com/seed/ray-machine/halcyon/-/blob/master/Browser/Lib/DePaint.cpp?ref_type=heads#L448
+// Quaternion multiplication helper (a * b)
 glm::quat qmul(glm::quat a, glm::vec4 b)
 {
 	glm::quat q;
@@ -18,7 +18,8 @@ glm::quat qmul(glm::quat a, glm::vec4 b)
 	return q;
 }
 
-//https://gitlab.ea.com/seed/ray-machine/halcyon/-/blob/master/Browser/Lib/DePaint.cpp?ref_type=heads#L448
+// Diagonalize a symmetric 3x3 matrix using Jacobi rotations
+// Returns quaternion representing rotation to principal axes; outDiagonal receives eigenvalues
 glm::quat Diagonalizer(const glm::mat3& A, glm::vec3& outDiagonal)
 {
 	assert(A[0][1] == A[1][0]);
@@ -70,16 +71,6 @@ glm::quat Diagonalizer(const glm::mat3& A, glm::vec3& outDiagonal)
 		q = qmul(q, jr);
 		q = normalize(q);
 	}
-	float h = 1.0f / sqrtf(2.0f); // M_SQRT2
-	auto e	= [&q, &A]() {
-		 // current ordering of eigenvals of q
-		 glm::mat3 m = transpose(glm::mat3_cast(q)) * A * glm::mat3_cast(q);
-		 return glm::vec3(m[0][0], m[1][1], m[2][2]);
-	};
-	// Suppress unused variable warning
-	(void)h;
-	(void)e;
-
 	return q;
 }
 

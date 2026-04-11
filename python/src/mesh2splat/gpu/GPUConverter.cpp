@@ -100,6 +100,20 @@ public:
     }
     
     bool createFramebuffer(int width, int height) {
+        // Validate dimensions to prevent integer overflow and excessive memory usage
+        // Max 8192x8192 is reasonable for most GPUs and prevents overflow in pixelCount calculation
+        constexpr int kMinResolution = 1;
+        constexpr int kMaxResolution = 8192;
+        
+        if (width < kMinResolution || height < kMinResolution) {
+            errorMessage_ = "Framebuffer dimensions must be at least 1x1";
+            return false;
+        }
+        if (width > kMaxResolution || height > kMaxResolution) {
+            errorMessage_ = "Framebuffer dimensions exceed maximum of 8192x8192";
+            return false;
+        }
+        
         // Delete old framebuffer if exists
         if (framebuffer_.fbo != 0) {
             glDeleteFramebuffers(1, &framebuffer_.fbo);

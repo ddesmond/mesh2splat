@@ -55,6 +55,9 @@ public:
     std::string getMeshFullFilePathDestinationWithSuffix(int formatIdx) const;
     std::string getPlyFilePathParentFolder() const;
     std::string getPlyFilePath() const;
+    
+    // Ensure the output directory exists (call before saving)
+    void ensureOutputDirectoryExists() const;
 
 
     float getGaussianStd() const;

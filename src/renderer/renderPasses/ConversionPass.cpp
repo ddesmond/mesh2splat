@@ -63,11 +63,7 @@ void ConversionPass::execute(RenderContext &renderContext)
         glEnable(GL_BLEND);
         glDisable(GL_CULL_FACE);
 
-        std::cerr << "[ConversionPass] Processing " << renderContext.dataMeshAndGlMesh.size() << " meshes" << std::endl;
         for (auto& mesh : renderContext.dataMeshAndGlMesh) {
-            std::cerr << "[ConversionPass] Drawing mesh: " << mesh.first.name 
-                      << " vao=" << mesh.second.vao 
-                      << " vertexCount=" << mesh.second.vertexCount << std::endl;
             conversion(renderContext, mesh, framebuffer);
         }
 
@@ -158,7 +154,6 @@ void ConversionPass::execute(RenderContext &renderContext)
     }
 
     renderContext.numberOfGaussians = written;
-    std::cerr << "[ConversionPass] Set numberOfGaussians=" << renderContext.numberOfGaussians << std::endl;
     if (candidatesRequested == 0) {
         std::cerr << "ERROR: No fragments rendered in conversion pass. Check transforms, bounds, and culling." << std::endl;
     }
@@ -232,26 +227,11 @@ void ConversionPass::conversion(
     glUtils::setUniform3f(converterProgramID, "u_bboxMin", mesh.first.bbox.min);
     glUtils::setUniform3f(converterProgramID, "u_bboxMax", mesh.first.bbox.max);
     glUtils::setUniform1i(converterProgramID, "u_useOrthogonalProjection", renderContext.useOrthogonalProjection ? 1 : 0);
-    
-    std::cerr << "[ConversionPass] u_bboxMin=(" << mesh.first.bbox.min.x << "," << mesh.first.bbox.min.y << "," << mesh.first.bbox.min.z << ")" << std::endl;
-    std::cerr << "[ConversionPass] u_bboxMax=(" << mesh.first.bbox.max.x << "," << mesh.first.bbox.max.y << "," << mesh.first.bbox.max.z << ")" << std::endl;
-    std::cerr << "[ConversionPass] u_useOrthogonalProjection=" << (renderContext.useOrthogonalProjection ? 1 : 0) << std::endl;
-    
+
     if (renderContext.debugColorStats) {
         glUtils::setUniform1ui(converterProgramID, "u_debugPrimId", static_cast<unsigned int>(mesh.first.primitiveIndex));
     }
 
     glBindVertexArray(mesh.second.vao);
-    
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        std::cerr << "[ConversionPass] GL error after VAO bind: " << err << std::endl;
-    }
-    
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)mesh.second.vertexCount);
-    
-    err = glGetError();
-    if (err != GL_NO_ERROR) {
-        std::cerr << "[ConversionPass] GL error after draw: " << err << std::endl;
-    }
 }
