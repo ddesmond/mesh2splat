@@ -18,7 +18,24 @@ namespace mesh2splat {
 // Constants
 //------------------------------------------------------------------------------
 
+/// Spherical harmonics coefficient for degree 0
 constexpr float SH_COEFF0 = 0.28209479177387814f;
+
+/// Epsilon values for numerical stability
+namespace epsilon {
+    /// Default epsilon for degenerate triangle detection
+    constexpr float kDegenerate = 1e-8f;
+    /// Minimum scale value for gaussians (avoids zero-size)
+    constexpr float kMinScale = 1e-7f;
+    /// Epsilon for matrix determinant checks
+    constexpr float kDeterminant = 1e-10f;
+    /// Epsilon for quaternion sqrt clamping
+    constexpr float kQuatSqrt = 1e-10f;
+    /// Epsilon for range normalization
+    constexpr float kRange = 1e-8f;
+    /// Small value to avoid division by zero in normalization
+    constexpr float kNormalize = 1e-8f;
+} // namespace epsilon
 
 //------------------------------------------------------------------------------
 // Enums

@@ -35,7 +35,7 @@ glm::mat2x3 Rasterizer::computeUv3DJacobian(const std::array<glm::vec3, 3>& posi
     
     // Compute inverse of UV matrix
     float det = uvMatrix[0][0] * uvMatrix[1][1] - uvMatrix[0][1] * uvMatrix[1][0];
-    if (std::abs(det) < 1e-10f) {
+    if (std::abs(det) < epsilon::kDeterminant) {
         det = 1.0f;
     }
     float invDet = 1.0f / det;
@@ -81,7 +81,7 @@ glm::quat Rasterizer::matrixToQuaternion(const glm::mat3& m) {
         biggestIndex = 3;
     }
     
-    float biggestVal = std::sqrt(std::max(fourBiggestSquaredMinus1 + 1.0f, 1e-10f)) * 0.5f;
+    float biggestVal = std::sqrt(std::max(fourBiggestSquaredMinus1 + 1.0f, epsilon::kQuatSqrt)) * 0.5f;
     float mult = 0.25f / biggestVal;
     
     glm::quat q;
@@ -124,9 +124,9 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
     // Check for degenerate triangle (cross product would be zero/near-zero)
     glm::vec3 cross = glm::cross(edge1, edge2);
     float crossLen = glm::length(cross);
-    if (crossLen < 1e-8f) {
+    if (crossLen < epsilon::kDegenerate) {
         // Degenerate triangle - return safe defaults
-        outScale = glm::vec3(1e-7f);
+        outScale = glm::vec3(epsilon::kMinScale);
         outRotation = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);  // identity quaternion (w,x,y,z)
         for (int i = 0; i < 3; i++) {
             outRasterUvs[i] = glm::vec2(0.0f);
@@ -160,7 +160,7 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
             float rangeY = bbox.max.y - bbox.min.y;
             float rangeZ = bbox.max.z - bbox.min.z;
             float range = std::max(rangeY, rangeZ);
-            if (range < 1e-8f) range = 1.0f;
+            if (range < epsilon::kRange) range = 1.0f;
             
             float relY = pos.y - bbox.min.y;
             float relZ = pos.z - bbox.min.z;
@@ -171,7 +171,7 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
             float rangeX = bbox.max.x - bbox.min.x;
             float rangeZ = bbox.max.z - bbox.min.z;
             float range = std::max(rangeX, rangeZ);
-            if (range < 1e-8f) range = 1.0f;
+            if (range < epsilon::kRange) range = 1.0f;
             
             float relX = pos.x - bbox.min.x;
             float relZ = pos.z - bbox.min.z;
@@ -182,7 +182,7 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
             float rangeX = bbox.max.x - bbox.min.x;
             float rangeY = bbox.max.y - bbox.min.y;
             float range = std::max(rangeX, rangeY);
-            if (range < 1e-8f) range = 1.0f;
+            if (range < epsilon::kRange) range = 1.0f;
             
             float relX = pos.x - bbox.min.x;
             float relY = pos.y - bbox.min.y;
@@ -215,7 +215,7 @@ void Rasterizer::computeFaceDataProjection(const Face& face, const BBox& bbox,
     float gaussianScaleX = glm::length(Ju);
     float gaussianScaleY = glm::length(Jv);
     
-    outScale = glm::vec3(gaussianScaleX, gaussianScaleY, 1e-7f);
+    outScale = glm::vec3(gaussianScaleX, gaussianScaleY, epsilon::kMinScale);
 }
 
 void Rasterizer::computeFaceDataUV(const Face& face,
@@ -237,9 +237,9 @@ void Rasterizer::computeFaceDataUV(const Face& face,
     // Check for degenerate triangle (cross product would be zero/near-zero)
     glm::vec3 cross = glm::cross(edge1, edge2);
     float crossLen = glm::length(cross);
-    if (crossLen < 1e-8f) {
+    if (crossLen < epsilon::kDegenerate) {
         // Degenerate triangle - return safe defaults
-        outScale = glm::vec3(1e-7f);
+        outScale = glm::vec3(epsilon::kMinScale);
         outRotation = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);  // identity quaternion (w,x,y,z)
         return;
     }
@@ -279,7 +279,7 @@ void Rasterizer::computeFaceDataUV(const Face& face,
     float gaussianScaleX = glm::length(Ju);
     float gaussianScaleY = glm::length(Jv);
     
-    outScale = glm::vec3(gaussianScaleX, gaussianScaleY, 1e-7f);
+    outScale = glm::vec3(gaussianScaleX, gaussianScaleY, epsilon::kMinScale);
 }
 
 void Rasterizer::rasterizeTriangle(const Face& face, const Material& material,

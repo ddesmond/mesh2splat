@@ -42,7 +42,7 @@ inline glm::vec2 octWrap(const glm::vec2& v) {
 
 glm::vec2 PlyIO::encodeOctahedral(const glm::vec3& normal) {
     // Normalize to unit octahedron
-    glm::vec3 n = normal / (std::abs(normal.x) + std::abs(normal.y) + std::abs(normal.z) + 1e-8f);
+    glm::vec3 n = normal / (std::abs(normal.x) + std::abs(normal.y) + std::abs(normal.z) + epsilon::kNormalize);
     
     glm::vec2 result;
     if (n.z >= 0.0f) {

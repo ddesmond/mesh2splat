@@ -8,11 +8,12 @@
 #include "core/GltfLoader.hpp"
 #include "core/PlyIO.hpp"
 
+#include <filesystem>
+#include <sstream>
+
 #ifdef MESH2SPLAT_ENABLE_GPU
 #include "gpu/GPUConverter.hpp"
 #endif
-
-#include <sstream>
 
 namespace mesh2splat {
 
@@ -203,6 +204,22 @@ public:
     }
     
     ConversionResult convertFile(const std::string& path, const ConversionOptions& options) {
+        // Validate input path exists
+        if (!std::filesystem::exists(path)) {
+            ConversionResult result;
+            result.success = false;
+            result.errorMessage = "File not found: " + path;
+            return result;
+        }
+        
+        // Validate file extension
+        if (!GltfLoader::isGltfFile(path)) {
+            ConversionResult result;
+            result.success = false;
+            result.errorMessage = "Unsupported file format. Expected .gltf or .glb: " + path;
+            return result;
+        }
+        
         // Load the file
         GltfLoader loader;
         Scene scene = loader.load(path);
