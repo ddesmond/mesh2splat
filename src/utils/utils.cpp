@@ -399,7 +399,7 @@ namespace utils
         bool skip = false;
         skip |= glm::any(glm::isnan(g.position)) || glm::any(glm::isinf(g.position));
         skip |= glm::any(glm::isnan(g.color))    || glm::any(glm::isinf(g.color));
-        skip |= glm::any(glm::isnan(g.scale))    || glm::any(glm::isinf(g.scale));
+        skip |= glm::any(glm::isnan(g.linearScale))    || glm::any(glm::isinf(g.linearScale));
         skip |= glm::any(glm::isnan(g.normal))   || glm::any(glm::isinf(g.normal));
         skip |= glm::any(glm::isnan(g.rotation)) || glm::any(glm::isinf(g.rotation));
         skip |= glm::any(glm::isnan(g.pbr))      || glm::any(glm::isinf(g.pbr));
@@ -407,7 +407,7 @@ namespace utils
     
         return (g.position == glm::vec4(0.0f) &&
                 g.color    == glm::vec4(0.0f) &&
-                g.scale    == glm::vec4(0.0f) &&
+                g.linearScale    == glm::vec4(0.0f) &&
                 g.normal   == glm::vec4(0.0f) &&
                 g.rotation == glm::vec4(0.0f) &&
                 g.pbr      == glm::vec4(0.0f));

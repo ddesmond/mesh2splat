@@ -147,7 +147,7 @@ namespace utils
     struct GaussianDataSSBO {
         glm::vec4 position;
         glm::vec4 color;
-        glm::vec4 scale;
+        glm::vec4 linearScale;  // Renamed from 'scale' for clarity (linear-space scale)
         glm::vec4 normal;
         glm::vec4 rotation;
         glm::vec4 pbr;
@@ -179,6 +179,7 @@ namespace utils
         MaterialGltf material; 
         float surfaceArea = 0;
         BBox bbox = BBox(glm::vec3(0), glm::vec3(0));
+        int primitiveIndex = -1;
 
         Mesh(const std::string& name = "Unnamed") : name(name) {}
     };

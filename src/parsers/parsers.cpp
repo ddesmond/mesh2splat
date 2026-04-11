@@ -308,13 +308,13 @@ namespace parsers
             float opacity = utils::invSigmoid(gaussian.color.a);
             file.write(reinterpret_cast<const char*>(&opacity), sizeof(opacity));
             
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(gaussian.scale.z * scaleMultiplier);           
+            gaussian.linearScale.x = std::log(gaussian.linearScale.x * scaleMultiplier);
+            gaussian.linearScale.y = std::log(gaussian.linearScale.y * scaleMultiplier);
+            gaussian.linearScale.z = std::log(gaussian.linearScale.z * scaleMultiplier);           
 
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(gaussian.scale.x));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(gaussian.scale.y));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(gaussian.scale.z));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.x), sizeof(gaussian.linearScale.x));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.y), sizeof(gaussian.linearScale.y));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.z), sizeof(gaussian.linearScale.z));
             //Rotation
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.x), sizeof(gaussian.rotation.x));
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.y), sizeof(gaussian.rotation.y));
@@ -409,14 +409,14 @@ namespace parsers
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.w), sizeof(float));
 
             //SCALE
-            float minXY = std::min(gaussian.scale.x, gaussian.scale.y);
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(minXY * scaleMultiplier);           
+            float minXY = std::min(gaussian.linearScale.x, gaussian.linearScale.y);
+            gaussian.linearScale.x = std::log(gaussian.linearScale.x * scaleMultiplier);
+            gaussian.linearScale.y = std::log(gaussian.linearScale.y * scaleMultiplier);
+            gaussian.linearScale.z = std::log(minXY * scaleMultiplier);           
 
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(float));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(float));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.x), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.y), sizeof(float));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.z), sizeof(float));
 
             //NORMAL COMPRESSED
             glm::vec2 mapped = EncodeOcta(gaussian.normal);
@@ -503,14 +503,14 @@ namespace parsers
             float opacity = utils::invSigmoid(gaussian.color.a);
             file.write(reinterpret_cast<const char*>(&opacity), sizeof(opacity));
 
-            gaussian.scale.x = std::log(gaussian.scale.x * scaleMultiplier);
-            gaussian.scale.y = std::log(gaussian.scale.y * scaleMultiplier);
-            gaussian.scale.z = std::log(gaussian.scale.z * scaleMultiplier);
+            gaussian.linearScale.x = std::log(gaussian.linearScale.x * scaleMultiplier);
+            gaussian.linearScale.y = std::log(gaussian.linearScale.y * scaleMultiplier);
+            gaussian.linearScale.z = std::log(gaussian.linearScale.z * scaleMultiplier);
 
             // Scale
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.x), sizeof(gaussian.scale.x));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.y), sizeof(gaussian.scale.y));
-            file.write(reinterpret_cast<const char*>(&gaussian.scale.z), sizeof(gaussian.scale.z));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.x), sizeof(gaussian.linearScale.x));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.y), sizeof(gaussian.linearScale.y));
+            file.write(reinterpret_cast<const char*>(&gaussian.linearScale.z), sizeof(gaussian.linearScale.z));
 
             // Rotation
             file.write(reinterpret_cast<const char*>(&gaussian.rotation.x), sizeof(gaussian.rotation.x));
@@ -596,10 +596,10 @@ namespace parsers
                 gaussian.color.z = rgb_color.b;
                 gaussian.color.w = utils::sigmoid(vertex_opacity[i]);
 
-                gaussian.scale.x = glm::exp(vertex_scale_0[i]);
-                gaussian.scale.y = glm::exp(vertex_scale_1[i]);
-                gaussian.scale.z = glm::exp(vertex_scale_2[i]);
-                gaussian.scale.w = 1.0f;
+                gaussian.linearScale.x = glm::exp(vertex_scale_0[i]);
+                gaussian.linearScale.y = glm::exp(vertex_scale_1[i]);
+                gaussian.linearScale.z = glm::exp(vertex_scale_2[i]);
+                gaussian.linearScale.w = 1.0f;
 
                 if (hasPbr)
                 {

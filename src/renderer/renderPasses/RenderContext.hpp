@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include "utils/utils.hpp"
 #include "utils/glUtils.hpp"
 #include "utils/ShaderRegistry.hpp"
@@ -65,6 +66,29 @@ struct RenderContext {
     unsigned int format; //0: from mesh2splat, 1: classic .ply 3dgs, 2: compressedPBR
     bool plyHasPbr = false; // if format == 1 (loaded ply file), does ply support pbr rendering
 
+    // Conversion options (from ECA merge)
+    uint32_t maxSplats = 4000000;
+    bool autoReduceResolution = true;
+    bool useOrthogonalProjection = true; // false = UV-based projection, true = orthogonal bbox projection
+    bool debugUv = false;
+    bool debugColor = false;
+    bool debugTextureStats = false;
+    bool debugColorStats = false;
+    bool debugUvCompare = false;
+    bool autoUvWrap = true;
+    int debugMaxPrimitives = 3;
+    int debugMaxVertices = 10;
+    int debugMaxMaterials = 10;
+    bool debugPrintSummary = true;
+    int debugMaxSplats = 10;
+    int forceUvWrapMode = 0; // 0=none, 1=repeat, 2=clamp, 3=mirror
+    int forceSrgbMode = 1; // 0=auto, 1=on, 2=off
+    int textureStatsDownsample = 256;
+    int dcMode = 0; // 0=current (SH0), 1=direct_linear, 2=direct_srgb
+    bool dcModeSpecified = false;
+    int opacityMode = 2; // 0=current, 1=raw, 2=logit
+    bool opacityModeSpecified = true;
+
     // Resources
     GLuint vao = 0;
     GLuint framebuffer = 0;
@@ -80,6 +104,8 @@ struct RenderContext {
     GLuint drawIndirectBuffer = 0;
     GLuint atomicCounterBuffer = 0;
     GLuint atomicCounterBufferConversionPass = 0;
+    GLuint conversionDebugCounters = 0;  // Debug counters for conversion pass
+    GLuint debugPrimIdBuffer = 0;        // Debug primitive ID buffer
     GLint numberOfGaussians = 0;
 
     // Data Structures
