@@ -4,13 +4,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "guiRendererConcreteMediator.hpp"
+#include <iostream>
 
 void GuiRendererConcreteMediator::notify(EventType event)
 {
     switch (event) {
         case EventType::LoadModel: {
+            std::cerr << "[DEBUG] LoadModel event triggered" << std::endl;
+            std::cerr << "[DEBUG] Mesh path: " << imguiUI.getMeshFilePath() << std::endl;
+            std::cerr << "[DEBUG] Parent folder: " << imguiUI.getMeshFilePathParentFolder() << std::endl;
             renderer.resetModelMatrices();
+            std::cerr << "[DEBUG] Calling loadModel..." << std::endl;
             renderer.getSceneManager().loadModel(imguiUI.getMeshFilePath(), imguiUI.getMeshFilePathParentFolder());
+            std::cerr << "[DEBUG] loadModel completed" << std::endl;
             renderer.gaussianBufferFromSize(imguiUI.getResolutionTarget() * imguiUI.getResolutionTarget());
             renderer.setFormatType(0); //TODO: use an enum
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
@@ -50,6 +56,7 @@ void GuiRendererConcreteMediator::notify(EventType event)
         }
         case EventType::RunConversion: {
             renderer.setViewportResolutionForConversion(imguiUI.getResolutionTarget());
+            renderer.setProjectionMode(imguiUI.getProjectionMode() != 0); // 0=UV, 1=Orthogonal
             renderer.enableRenderPass(conversionPassName);
             imguiUI.setRunConversion(false);
             
@@ -109,8 +116,17 @@ void GuiRendererConcreteMediator::notify(EventType event)
             break;
         }
         case EventType::SavePLY: {
-            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption());
+            renderer.getSceneManager().exportPly(imguiUI.getMeshFullFilePathDestination(), imguiUI.getFormatOption(), imguiUI.getFlipYOnExport());
             imguiUI.setShouldSavePly(false);
+            break;
+        }
+        case EventType::SaveAllFormats: {
+            // Save current format (0=Standard, 1=PBR, 2=Compressed PBR)
+            int formatIdx = imguiUI.getSaveAllFormatsIndex();
+            std::string path = imguiUI.getMeshFullFilePathDestinationWithSuffix(formatIdx);
+            renderer.getSceneManager().exportPly(path, formatIdx, imguiUI.getFlipYOnExport());
+            std::cerr << "[SaveAllFormats] Saved format " << formatIdx << " to: " << path << std::endl;
+            imguiUI.advanceSaveAllFormats();
             break;
         }
         case EventType::ResizedWindow: {
@@ -141,20 +157,21 @@ void GuiRendererConcreteMediator::update()
     bool windowVisible = !renderer.isWindowMinimized();
 
     const bool batchActive      = imguiUI.isBatchRunning();
-    const bool batchHasWork     = (currentJob != nullptr) || imguiUI.hasBatchWork();
+    const bool batchHasWork     = (currentJobIndex >= 0) || imguiUI.hasBatchWork();
 
     if (windowVisible && batchActive) {
         // If batch says it's running but there's nothing to do, end it now!
         if (!batchHasWork) {
             imguiUI.cancelBatch();
-            currentJob = nullptr;
+            currentJobIndex = -1;
             batchSubstate = BatchSubstate::Idle;
         } else {
             switch (batchSubstate) {
                 case BatchSubstate::Idle: {
                     if (imguiUI.hasBatchWork()) {
-                        if (ImGuiUI::BatchItem* job = imguiUI.popNextBatchItem()) {
-                            startBatchJob(job, imguiUI);
+                        int jobIdx = imguiUI.popNextBatchItemIndex();
+                        if (jobIdx >= 0) {
+                            startBatchJob(jobIdx, imguiUI);
                         }
                     }
                     break;
@@ -169,7 +186,8 @@ void GuiRendererConcreteMediator::update()
                 case BatchSubstate::Exporting: {
                     try {
                         const unsigned int fmt = imguiUI.getFormatOption();
-                        renderer.getSceneManager().exportPly(currentJob->outPath, fmt);
+                        ImGuiUI::BatchItem& job = imguiUI.getBatchItemAt(currentJobIndex);
+                        renderer.getSceneManager().exportPly(job.outPath, fmt);
                         finishBatchJobSuccess(imguiUI);
                     } catch (const std::exception& e) {
                         finishBatchJobFail(imguiUI, e.what());
@@ -219,6 +237,10 @@ void GuiRendererConcreteMediator::update()
             notify(EventType::SavePLY);
         }
 
+        if (imguiUI.shouldSaveAllFormats()) {
+            notify(EventType::SaveAllFormats);
+        }
+
         notify(EventType::UpdateTransforms);
     }
     
@@ -228,19 +250,20 @@ void GuiRendererConcreteMediator::update()
 
 //TODO: as you can see batchItem should NOT be part of the ImGuiUI, this is poor SWE
 
-static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB; }
+static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB || e == utils::ModelFileExtension::GLTF; }
 static bool isPly(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::PLY; }
 
-void GuiRendererConcreteMediator::startBatchJob(ImGuiUI::BatchItem* job, ImGuiUI& ui) {
-    currentJob = job;
+void GuiRendererConcreteMediator::startBatchJob(int jobIndex, ImGuiUI& ui) {
+    currentJobIndex = jobIndex;
     framesSinceDispatch = 0;
     batchSubstate = BatchSubstate::Loading;
 
     renderer.resetModelMatrices();
     renderer.setFormatType(0); 
 
-    if (isGlb(job->ext)) {
-        renderer.getSceneManager().loadModel(job->path, job->parent);
+    ImGuiUI::BatchItem& job = ui.getBatchItemAt(currentJobIndex);
+    if (isGlb(job.ext)) {
+        renderer.getSceneManager().loadModel(job.path, job.parent);
         renderer.gaussianBufferFromSize(ui.getResolutionTarget() * ui.getResolutionTarget());
         renderer.setViewportResolutionForConversion(ui.getResolutionTarget());
         renderer.enableRenderPass(conversionPassName);
@@ -252,13 +275,15 @@ void GuiRendererConcreteMediator::startBatchJob(ImGuiUI::BatchItem* job, ImGuiUI
 
 
 void GuiRendererConcreteMediator::finishBatchJobSuccess(ImGuiUI& ui) {
-    ui.markBatchItemDone(currentJob->path);
-    currentJob = nullptr;
+    ImGuiUI::BatchItem& job = ui.getBatchItemAt(currentJobIndex);
+    ui.markBatchItemDone(job.path);
+    currentJobIndex = -1;
     batchSubstate = BatchSubstate::Idle;
 }
 
 void GuiRendererConcreteMediator::finishBatchJobFail(ImGuiUI& ui, const std::string& what) {
-    ui.markBatchItemFailed(currentJob->path, what);
-    currentJob = nullptr;
+    ImGuiUI::BatchItem& job = ui.getBatchItemAt(currentJobIndex);
+    ui.markBatchItemFailed(job.path, what);
+    currentJobIndex = -1;
     batchSubstate = BatchSubstate::Idle;
 }
