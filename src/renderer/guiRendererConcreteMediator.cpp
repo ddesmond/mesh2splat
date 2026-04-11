@@ -230,7 +230,7 @@ void GuiRendererConcreteMediator::update()
 
 //TODO: as you can see batchItem should NOT be part of the ImGuiUI, this is poor SWE
 
-static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB; }
+static bool isGlb(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::GLB || e == utils::ModelFileExtension::GLTF; }
 static bool isPly(utils::ModelFileExtension e) { return e == utils::ModelFileExtension::PLY; }
 
 void GuiRendererConcreteMediator::startBatchJob(int jobIndex, ImGuiUI& ui) {

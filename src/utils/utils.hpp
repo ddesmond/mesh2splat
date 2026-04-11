@@ -217,6 +217,7 @@ namespace utils
         NONE,
         PLY,
         GLB,
+        GLTF,
     };
 
 

@@ -450,6 +450,7 @@ namespace utils
         std::string ext = filename.substr(pos+1);
 
         if (ext == "glb") return ModelFileExtension::GLB;
+        else if (ext == "gltf") return ModelFileExtension::GLTF;
         else if (ext == "ply") return ModelFileExtension::PLY;
 
         return ModelFileExtension::NONE;
@@ -521,6 +522,7 @@ namespace utils
             case ModelFileExtension::NONE: return "none";
             case ModelFileExtension::PLY: return "ply";
             case ModelFileExtension::GLB: return "glb";
+            case ModelFileExtension::GLTF: return "gltf";
             default: return "Unknown";
         }
     }
