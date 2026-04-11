@@ -39,6 +39,13 @@ GaussianRelightingPass::GaussianRelightingPass()
 
 }
 
+GaussianRelightingPass::~GaussianRelightingPass()
+{
+    if (m_fullscreenQuadVAO != 0) glDeleteVertexArrays(1, &m_fullscreenQuadVAO);
+    if (m_fullscreenQuadVBO != 0) glDeleteBuffers(1, &m_fullscreenQuadVBO);
+    if (m_fullscreenQuadEBO != 0) glDeleteBuffers(1, &m_fullscreenQuadEBO);
+}
+
 void GaussianRelightingPass::bindGBufferAndDraw(
     GLuint shader,
     RenderContext& renderContext,
