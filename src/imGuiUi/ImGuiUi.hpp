@@ -107,6 +107,8 @@ public:
     };
 
     BatchItem* popNextBatchItem();      // get next Queued -> set to Processing
+    int popNextBatchItemIndex();         // get next Queued -> set to Processing, returns index (-1 if none)
+    BatchItem& getBatchItemAt(int index);
     void markBatchItemDone(const std::string& path);  // Processing -> Done
     void markBatchItemFailed(const std::string& path, const std::string& err);
     void cancelBatch();     
