@@ -4,9 +4,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "GaussiansPrepass.hpp"
+#include <iostream>
 
 void GaussiansPrepass::execute(RenderContext& renderContext)
 {
+    if (renderContext.numberOfGaussians == 0) {
+        return; // Skip if no gaussians
+    }
+    std::cerr << "[GaussiansPrepass] Running with " << renderContext.numberOfGaussians << " gaussians" << std::endl;
 
 #ifdef  _DEBUG
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, PassesDebugIDs::GAUSSIAN_SPLATTING_PREPASS, -1, "GAUSSIAN_SPLATTING_PREPASS");

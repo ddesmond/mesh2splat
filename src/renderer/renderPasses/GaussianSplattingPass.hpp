@@ -9,7 +9,7 @@
 class GaussianSplattingPass : public IRenderPass {
 public:
     GaussianSplattingPass(RenderContext& renderContext);
-    ~GaussianSplattingPass() override = default;
+    ~GaussianSplattingPass() override;
     void execute(RenderContext& renderContext) override;
 private:
     GLuint quadVBO = 0;

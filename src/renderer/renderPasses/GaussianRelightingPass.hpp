@@ -9,7 +9,7 @@
 class GaussianRelightingPass : public IRenderPass {
 public:
     GaussianRelightingPass();
-    ~GaussianRelightingPass() override = default;
+    ~GaussianRelightingPass() override;
     void execute(RenderContext& renderContext) override;
 private:
     GLuint m_fullscreenQuadVAO = 0;
