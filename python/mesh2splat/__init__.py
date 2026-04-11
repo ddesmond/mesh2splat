@@ -25,6 +25,8 @@ from ._mesh2splat import (
     Face,
     Mesh,
     Scene,
+    # Loaders
+    GltfLoader,
 )
 
 __version__ = get_version()
@@ -46,4 +48,5 @@ __all__ = [
     "Face",
     "Mesh",
     "Scene",
+    "GltfLoader",
 ]

@@ -7,6 +7,7 @@
 #include <pybind11/stl.h>
 
 #include "core/Types.hpp"
+#include "core/GltfLoader.hpp"
 
 namespace py = pybind11;
 
@@ -206,6 +207,16 @@ PYBIND11_MODULE(_mesh2splat, m) {
         .def("__repr__", [](const Scene& s) {
             return "<Scene meshes=" + std::to_string(s.meshes.size()) + " source=\"" + s.sourcePath + "\">";
         });
+    
+    //--------------------------------------------------------------------------
+    // GltfLoader
+    //--------------------------------------------------------------------------
+    
+    py::class_<GltfLoader>(m, "GltfLoader", "GLTF/GLB file loader")
+        .def(py::init<>())
+        .def("load", &GltfLoader::load, py::arg("path"),
+            py::call_guard<py::gil_scoped_release>(),
+            "Load a GLTF or GLB file and return a Scene");
     
     //--------------------------------------------------------------------------
     // Module-level functions
