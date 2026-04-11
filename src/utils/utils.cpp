@@ -280,10 +280,11 @@ namespace utils
 
     glm::vec3 GenerateTangent(glm::vec3& normal) {
         glm::vec3 tangent;
+        // Choose reference vector not parallel to normal: X-axis if normal is more aligned with Z, else Z-axis
         if (abs(normal.x) < abs(normal.z))
-            tangent = glm::cross(normal, glm::vec3(0.0f, 0.0f, 0.0f));
+            tangent = glm::cross(normal, glm::vec3(1.0f, 0.0f, 0.0f));
         else
-            tangent = glm::cross(normal, glm::vec3(1.0f, 1.0f, 1.0f));
+            tangent = glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f));
         return glm::normalize(tangent);
     }
 
