@@ -11,6 +11,11 @@ make wheels-macos
 # Build Linux wheels (all distros via Docker)
 make wheels-linux
 
+# Build a Windows GPU wheel from PowerShell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip build
+.\.venv\Scripts\python.exe -m build --wheel -o dist\windows
+
 # Build everything
 make wheels-all
 ```
@@ -27,6 +32,15 @@ make wheels-all
 
 - Docker installed and running
 - No other dependencies needed (everything runs in containers)
+
+### Windows
+
+- Python 3.10, 3.11, or 3.12 installed
+- CMake 3.15+
+- Visual Studio 2022 with the "Desktop development with C++" workload
+- OpenGL-compatible GPU and drivers
+
+Windows Python wheels build with GPU support enabled by default. The GPU backend uses WGL for the headless OpenGL context and the bundled static GLEW library for OpenGL function loading.
 
 ## macOS Builds
 
@@ -93,6 +107,24 @@ make wheels-linux-ubuntu2204       # Ubuntu 22.04 LTS
 make wheels-linux-ubuntu2404       # Ubuntu 24.04 LTS
 ```
 
+## Windows Builds
+
+Run these commands from PowerShell in the repository root:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip build
+.\.venv\Scripts\python.exe -m build --wheel -o dist\windows
+```
+
+Output: `dist\windows\mesh2splat-0.1.0-cp312-cp312-win_amd64.whl`
+
+To build without GPU support:
+
+```powershell
+.\.venv\Scripts\python.exe -m build --wheel -o dist\windows-cpu --config-setting=cmake.define.MESH2SPLAT_ENABLE_GPU=OFF
+```
+
 ## Output Structure
 
 After building, wheels are organized as:
@@ -116,6 +148,8 @@ dist/
     │   └── mesh2splat-0.1.0-cp310-cp310-linux_x86_64.whl
     └── ubuntu2404/
         └── mesh2splat-0.1.0-cp312-cp312-linux_x86_64.whl
+└── windows/
+    └── mesh2splat-0.1.0-cp312-cp312-win_amd64.whl
 ```
 
 ## Installing Built Wheels
@@ -129,6 +163,13 @@ pip install --upgrade dist/macos/mesh2splat-*.whl
 
 # Verify installation
 python -c "import mesh2splat; print(mesh2splat.get_build_info())"
+```
+
+On Windows:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --force-reinstall dist\windows\mesh2splat-0.1.0-cp312-cp312-win_amd64.whl
+.\.venv\Scripts\python.exe -c "import mesh2splat; print(mesh2splat.get_build_info()); print(mesh2splat.Converter.get_available_backends())"
 ```
 
 ## Testing
@@ -146,6 +187,20 @@ print(f'Backends: {mesh2splat.Converter.get_available_backends()}')
 "
 ```
 
+### Windows GPU Smoke Test
+
+After installing the Windows wheel, this should report `GPU+CPU`, list both CPU and GPU backends, and initialize the default converter on GPU:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import mesh2splat; print(mesh2splat.get_build_info()); print(mesh2splat.Converter.get_available_backends()); c=mesh2splat.Converter(); print(c, c.is_ready(), c.get_active_backend(), c.get_error_message())"
+```
+
+For an end-to-end conversion test, download a small glTF model and convert it:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import mesh2splat; opts=mesh2splat.ConversionOptions(); opts.resolution=64; opts.backend=mesh2splat.Backend.GPU; result=mesh2splat.Converter(mesh2splat.Backend.GPU).convert_file('model.gltf', opts); print(result.success, result.used_backend, result.total_triangles, result.total_gaussians, result.error_message); mesh2splat.PlyIO.save('model_gpu_test.ply', result.gaussians) if result.success else exit(1)"
+```
+
 ## Cleaning Build Artifacts
 
 ```bash
@@ -154,10 +209,12 @@ make clean
 
 This removes:
 - `build/` - CMake build directory
+- `build-*/` - local platform-specific CMake build directories
 - `dist/` - Built wheels
 - `*.egg-info/` - Package metadata
 - `python/mesh2splat/*.so` - Compiled extensions
 - `wheelhouse/` - cibuildwheel output
+- `test-assets/` - downloaded local test assets
 
 ## Troubleshooting
 
@@ -196,6 +253,16 @@ sudo apt-get install libgl1-mesa-dev libegl1-mesa-dev
 # RHEL/CentOS
 sudo yum install mesa-libGL-devel mesa-libEGL-devel
 ```
+
+### "GPU backend not available" (Windows)
+
+Check that the wheel was built with GPU support:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import mesh2splat; print(mesh2splat.get_build_info())"
+```
+
+The output should include `GPU+CPU [Windows]`. If it says `CPU`, rebuild without the CPU-only override and ensure Visual Studio, CMake, and GPU drivers are installed.
 
 ### Docker build fails
 

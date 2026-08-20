@@ -37,6 +37,8 @@ std::string getBuildInfo() {
     oss << " [macOS]";
 #elif defined(__linux__)
     oss << " [Linux]";
+#elif defined(_WIN32)
+    oss << " [Windows]";
 #else
     oss << " [Unknown OS]";
 #endif

@@ -147,11 +147,14 @@ test:
 
 clean:
 	rm -rf build/
+	rm -rf build-*/
+	rm -rf install-*/
 	rm -rf dist/
 	rm -rf *.egg-info/
 	rm -rf python/mesh2splat/*.so
 	rm -rf python/mesh2splat/__pycache__/
 	rm -rf wheelhouse/
+	rm -rf test-assets/
 	@echo "Cleaned build artifacts"
 
 # ============================================================================

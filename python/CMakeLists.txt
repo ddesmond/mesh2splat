@@ -64,16 +64,29 @@ if(MESH2SPLAT_ENABLE_GPU)
         target_link_libraries(_mesh2splat PRIVATE OpenGL::OpenGL OpenGL::EGL)
         target_compile_definitions(_mesh2splat PRIVATE MESH2SPLAT_USE_EGL)
     elseif(WIN32)
-        # Windows: Use WGL (not yet implemented, GPU disabled on Windows by default)
+        # Windows: Use WGL with bundled GLEW for OpenGL function loading.
         find_package(OpenGL REQUIRED)
-        target_link_libraries(_mesh2splat PRIVATE OpenGL::GL)
-        target_compile_definitions(_mesh2splat PRIVATE MESH2SPLAT_USE_WGL)
+        target_include_directories(_mesh2splat PRIVATE
+            ${CMAKE_SOURCE_DIR}/thirdParty/glew/include
+        )
+        target_link_libraries(_mesh2splat PRIVATE
+            OpenGL::GL
+            ${CMAKE_SOURCE_DIR}/thirdParty/glew/lib/Release/x64/glew32s.lib
+        )
+        target_compile_definitions(_mesh2splat PRIVATE MESH2SPLAT_USE_WGL GLEW_STATIC)
     endif()
 endif()
 
 # Static linking for portable Linux wheels (avoid GLIBC/GLIBCXX version issues)
 if(UNIX AND NOT APPLE)
     target_link_options(_mesh2splat PRIVATE -static-libstdc++ -static-libgcc)
+endif()
+
+if(MSVC)
+    target_link_options(_mesh2splat PRIVATE
+        /ignore:4098  # defaultlib runtime library conflict from bundled GLEW
+        /ignore:4099  # PDB not found for bundled third-party libraries
+    )
 endif()
 
 # For local development: output to python package directory

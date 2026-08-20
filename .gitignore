@@ -31,6 +31,8 @@ bld/
 [Ll]og/
 [Ll]ogs/
 build/
+build-*/
+install-*/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -417,6 +419,7 @@ dist/
 
 # Models (test data - large files)
 models/
+test-assets/
 
 # macOS
 .DS_Store

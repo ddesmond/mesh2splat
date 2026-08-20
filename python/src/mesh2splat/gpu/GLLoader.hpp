@@ -5,6 +5,7 @@
 //
 // On Linux with EGL, OpenGL core profile functions must be loaded dynamically.
 // macOS provides them directly via <OpenGL/gl3.h>.
+// Windows uses bundled GLEW.
 //
 
 #pragma once
@@ -17,6 +18,22 @@ namespace mesh2splat {
 namespace gl {
     inline bool loadGLFunctions() { return true; }
     inline bool areGLFunctionsLoaded() { return true; }
+} // namespace gl
+} // namespace mesh2splat
+
+#elif defined(_WIN32)
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <GL/glew.h>
+#include <GL/wglew.h>
+
+namespace mesh2splat {
+namespace gl {
+    bool loadGLFunctions();
+    bool areGLFunctionsLoaded();
 } // namespace gl
 } // namespace mesh2splat
 
@@ -183,4 +200,4 @@ bool areGLFunctionsLoaded();
 #define glActiveTexture mesh2splat::gl::glActiveTexture
 #define glGenerateMipmap mesh2splat::gl::glGenerateMipmap
 
-#endif // __linux__
+#endif // platform

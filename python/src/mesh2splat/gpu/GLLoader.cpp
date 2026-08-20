@@ -6,7 +6,44 @@
 // Don't include GLLoader.hpp here - it has macros that conflict with definitions
 // Instead, define everything directly
 
-#if defined(__linux__)
+#if defined(_WIN32)
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <GL/glew.h>
+#include <GL/wglew.h>
+
+namespace mesh2splat {
+namespace gl {
+
+static bool s_loaded = false;
+
+bool loadGLFunctions() {
+    if (s_loaded) return true;
+
+    glewExperimental = GL_TRUE;
+    GLenum result = glewInit();
+    if (result != GLEW_OK) {
+        return false;
+    }
+
+    // GLEW can leave a benign GL_INVALID_ENUM from extension probing.
+    while (glGetError() != GL_NO_ERROR) {}
+
+    s_loaded = true;
+    return true;
+}
+
+bool areGLFunctionsLoaded() {
+    return s_loaded;
+}
+
+} // namespace gl
+} // namespace mesh2splat
+
+#elif defined(__linux__)
 
 #include <EGL/egl.h>
 #define GL_GLEXT_PROTOTYPES 0
@@ -171,4 +208,4 @@ bool areGLFunctionsLoaded() {
 } // namespace gl
 } // namespace mesh2splat
 
-#endif // __linux__
+#endif // platform
