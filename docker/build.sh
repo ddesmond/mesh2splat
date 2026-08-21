@@ -27,6 +27,7 @@ DISTROS=(
     "debian12"
     "ubuntu2204"
     "ubuntu2404"
+    "debian13"
 )
 
 build_distro() {

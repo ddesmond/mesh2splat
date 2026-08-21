@@ -1,0 +1,27 @@
+# python:3.12-slim (Debian 13 Trixie) — the exact base of hazel-worker-3d
+FROM python:3.12-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    ninja-build \
+    libgl1-mesa-dev \
+    libegl1-mesa-dev \
+    libx11-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY . /build/
+
+RUN python -m venv /venv && \
+    /venv/bin/pip install --upgrade pip build scikit-build-core pybind11 numpy && \
+    /venv/bin/python -m build --wheel -o /build/dist/
+
+RUN /venv/bin/pip install /build/dist/*.whl --force-reinstall && \
+    /venv/bin/python -c "import mesh2splat; print(f'Debian 13 / py3.12: {mesh2splat.get_build_info()}')"
+
+VOLUME /output
+CMD ["sh", "-c", "cp /build/dist/*.whl /output/ 2>/dev/null || echo 'No wheels to copy'"]
